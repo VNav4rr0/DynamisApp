@@ -1,0 +1,12 @@
+{
+  "translation": {
+    "welcome": {
+      "title": "Real transformation happens one step at a time.",
+      "loginButton": "Log In",
+      "registerButton": "Sign Up"
+    },
+    "home": {
+      "greeting": "Hello, User!"
+    }
+  }
+}

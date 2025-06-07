@@ -1,25 +1,27 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet } from 'react-native'; // O StyleSheet não era usado, mas pode ser útil. A View é necessária.
+import '../src/i18n';
+import { View, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 
-// --- Imports do React Native Paper ---
+// Imports do React Native Paper
 import { 
   MD3DarkTheme,
   Provider as PaperProvider 
 } from 'react-native-paper';
 
-import BoasVindasScreen from './screens/BoasVindasScreen';
-import HomeScreen from './screens/HomeScreen';
-import ProgressoDetalhadoScreen from './screens/ProgressoDetalhadoScreen';
-import CadastroInicialScreen from './screens/CadastroInicialScreen';
-import DefinirMetasScreen from './screens/DefinirMetasScreen';
-import LoginScreen from './screens/LoginScreen';
+// Imports das Telas
+import BoasVindasScreen from '../src/screens/BoasVindasScreen';
+import HomeScreen from '../src/screens/HomeScreen';
+import ProgressoDetalhadoScreen from '../src/screens/ProgressoDetalhadoScreen';
+import CadastroInicialScreen from '../src/screens/CadastroInicialScreen';
+import DefinirMetasScreen from '../src/screens/DefinirMetasScreen';
+import LoginScreen from '../src/screens/LoginScreen';
 
-
+// Definição de tipo das telas para o navegador
 export type RootStackParamList = {
   Home: undefined;
   ProgressoDetalhado: undefined;
@@ -31,9 +33,13 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// --- Configuração do Tema Customizado (seu código aqui estava correto) ---
+// Configuração do Tema Customizado com as fontes
 const theme = {
   ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    outline: '#6ad400', // Cor da borda para botões 'outlined'
+  },
   fonts: {
     ...MD3DarkTheme.fonts,
     regular: {
@@ -51,6 +57,7 @@ const theme = {
   },
 };
 
+// Mantém a splash screen visível durante o carregamento
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
@@ -58,6 +65,10 @@ export default function App() {
     'Fustat-Regular': require('../assets/font/static/Fustat-Regular.ttf'),
     'Fustat-Bold': require('../assets/font/static/Fustat-Bold.ttf'),
     'Fustat-Medium': require('../assets/font/static/Fustat-Medium.ttf'),
+    'Fustat-Light': require('../assets/font/static/Fustat-Light.ttf'),
+    'Fustat-ExtraBold': require('../assets/font/static/Fustat-ExtraBold.ttf'),
+    'Fustat-ExtraLight': require('../assets/font/static/Fustat-ExtraLight.ttf'),
+    'Fustat-SemiBold': require('../assets/font/static/Fustat-SemiBold.ttf'),
   });
 
   const onLayoutRootView = useCallback(async () => {
@@ -75,7 +86,7 @@ export default function App() {
   }
   
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <View style={styles.container} onLayout={onLayoutRootView}>
       <PaperProvider theme={theme}>
         <NavigationContainer>
           <Stack.Navigator 
@@ -98,3 +109,9 @@ export default function App() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});

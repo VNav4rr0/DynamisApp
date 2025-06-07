@@ -1,6 +1,8 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    "resolveJsonModule": true, // <-- GARANTA QUE ESTA LINHA EXISTA
+    "esModuleInterop": true // É bom ter esta também
   }
 }
