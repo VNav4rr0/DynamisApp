@@ -1,19 +1,24 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { View, StyleSheet } from 'react-native'; // O StyleSheet não era usado, mas pode ser útil. A View é necessária.
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 
-// Importe suas telas aqui
-// Assegure-se de que o caminho está correto
+// --- Imports do React Native Paper ---
+import { 
+  MD3DarkTheme,
+  Provider as PaperProvider 
+} from 'react-native-paper';
+
+import BoasVindasScreen from './screens/BoasVindasScreen';
 import HomeScreen from './screens/HomeScreen';
 import ProgressoDetalhadoScreen from './screens/ProgressoDetalhadoScreen';
 import CadastroInicialScreen from './screens/CadastroInicialScreen';
 import DefinirMetasScreen from './screens/DefinirMetasScreen';
 import LoginScreen from './screens/LoginScreen';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export type RootStackParamList = {
   Home: undefined;
@@ -21,38 +26,75 @@ export type RootStackParamList = {
   CadastroInicial: undefined;
   DefinirMetas: undefined;
   Login: undefined;
-  // Adicione outras telas aqui se tiver parâmetros
-  // DetalheItem: { itemId: string; };
+  BoasVindas: undefined;
 };
 
-export default function App() {
-  return (
-    <NavigationContainer>
-      <>
-        <Stack.Navigator initialRouteName="Login" screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: '#000000' }
-        }}>
-          {/* Telas de Autenticação/Cadastro */}
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="CadastroInicial" component={CadastroInicialScreen} />
-          <Stack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-          {/* Telas Principais do App */}
-          <Stack.Screen name="Home">
-            {(props: NativeStackScreenProps<RootStackParamList, 'Home'>) => <HomeScreen {...props} />}
-          </Stack.Screen>
-          <Stack.Screen name="ProgressoDetalhado">
-            {(props: NativeStackScreenProps<RootStackParamList, 'ProgressoDetalhado'>) => <ProgressoDetalhadoScreen {...props} />}
-          </Stack.Screen>
-          {/* Adicione outras telas aqui com o mesmo padrão se tiver o erro */}
-        </Stack.Navigator>
-        <StatusBar style="light" />
-      </>
-    </NavigationContainer>
+// --- Configuração do Tema Customizado (seu código aqui estava correto) ---
+const theme = {
+  ...MD3DarkTheme,
+  fonts: {
+    ...MD3DarkTheme.fonts,
+    regular: {
+      fontFamily: 'Fustat-Regular',
+      fontWeight: 'normal' as 'normal',
+    },
+    medium: {
+      fontFamily: 'Fustat-Medium',
+      fontWeight: 'normal' as 'normal',
+    },
+    bold: {
+      fontFamily: 'Fustat-Bold',
+      fontWeight: 'normal' as 'normal',
+    },
+  },
+};
+
+SplashScreen.preventAutoHideAsync();
+
+export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    'Fustat-Regular': require('../assets/font/static/Fustat-Regular.ttf'),
+    'Fustat-Bold': require('../assets/font/static/Fustat-Bold.ttf'),
+    'Fustat-Medium': require('../assets/font/static/Fustat-Medium.ttf'),
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded || fontError) {
+      await SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, fontError]);
+
+  if (fontError) {
+    console.error("Erro ao carregar fontes:", fontError);
+  }
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+  
+  return (
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <PaperProvider theme={theme}>
+        <NavigationContainer>
+          <Stack.Navigator 
+            initialRouteName="BoasVindas"
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#000000' }
+            }}
+          >
+            <Stack.Screen name="BoasVindas" component={BoasVindasScreen} />
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="CadastroInicial" component={CadastroInicialScreen} />
+            <Stack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
+            <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="ProgressoDetalhado" component={ProgressoDetalhadoScreen} />
+          </Stack.Navigator>
+          <StatusBar style="light" />
+        </NavigationContainer>
+      </PaperProvider>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  // Se precisar de estilos para o container principal do app, etc.
-});
