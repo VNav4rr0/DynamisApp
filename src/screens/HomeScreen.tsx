@@ -30,7 +30,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000', // Fundo preto
+    backgroundColor: '#000000', 
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,

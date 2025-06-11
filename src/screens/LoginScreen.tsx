@@ -1,52 +1,224 @@
-import React from 'react';
-import { View, Text, StyleSheet, Button } from 'react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  Keyboard,
+  Dimensions,
+  SafeAreaView,
+  TouchableWithoutFeedback,
+  Alert,
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../App'; // Importa os tipos definidos em App.tsx
+import { RootStackParamList } from '../App';
+import Icon from 'react-native-vector-icons/Ionicons';
 
-// Define o tipo das props para a tela Home
+const { height: screenHeight } = Dimensions.get('window');
+
 type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bem Vindo, Usuário!</Text>
-      <Text style={styles.subtitle}>Cada passo te aproxima do seu objetivo!</Text>
-      {/* Conteúdo da sua Home aqui */}
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailError, setEmailError] = useState(false);
+  const [senhaError, setSenhaError] = useState(false);
 
-      <Button
-        title="Ir para Progresso Detalhado"
-        onPress={() => navigation.navigate('ProgressoDetalhado')} // Navega para a tela de Progresso
-        color="#6ad400" // Cor do botão
-      />
-      <Button
-        title="Fazer Login"
-        onPress={() => navigation.navigate('Login')} // Navega para a tela de Login
-        color="#6ad400"
-      />
+  const validateFields = (): boolean => {
+    Keyboard.dismiss();
+    let isValid = true;
+
+    setEmailError(false);
+    setSenhaError(false);
+
+    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
+      setEmailError(true);
+      isValid = false;
+    }
+
+    if (!senha.trim() || senha.length < 6) {
+      setSenhaError(true);
+      isValid = false;
+    }
+
+    return isValid;
+  };
+
+  const handleLogin = () => {
+    if (validateFields()) {
+      console.log('Login com:', { email, senha });
+      navigation.navigate('ProgressoDetalhado');
+    } else {
+      Alert.alert(
+        'Campos obrigatórios',
+        'Por favor, preencha todos os campos corretamente.'
+      );
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.title}>Entrar</Text>
+            <Text style={styles.subtitle}>Bem-vindo de volta! Continue sua jornada.</Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#ccc"
+              style={[styles.input, emailError && styles.inputError]}
+              keyboardType="email-address"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                setEmailError(false);
+              }}
+              autoCapitalize="none"
+            />
+
+            <View style={[styles.passwordInputContainer, senhaError && styles.inputError]}>
+              <TextInput
+                placeholder="Senha"
+                placeholderTextColor="#ccc"
+                style={styles.passwordTextInput}
+                secureTextEntry={!showPassword}
+                value={senha}
+                onChangeText={(text) => {
+                  setSenha(text);
+                  setSenhaError(false);
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordToggleIcon}
+                activeOpacity={0.7}
+              >
+                <Icon name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color="#ccc" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.forgotPasswordContainer} activeOpacity={0.7}>
+              <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.buttonContainer}>
+  <TouchableOpacity onPress={handleLogin} activeOpacity={0.8}>
+    <View style={[styles.roundedButton, { backgroundColor: '#82CD32' }]}>
+      <Text style={styles.buttonText}>Entrar</Text>
     </View>
+  </TouchableOpacity>
+</View>
+        </View>
+      </TouchableWithoutFeedback>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#000000', // Fundo preto
-    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  container: {
+    marginTop: 60,
+    flex: 1,
+    paddingHorizontal: '5%',
     justifyContent: 'center',
-    padding: 20,
+  },
+  headerContainer: {
+    alignItems: 'flex-start',
+    marginBottom: screenHeight * 0.05,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF', // Texto branco
-    marginBottom: 10,
+    marginTop: 50,
+    fontSize: 36,
+    fontFamily: 'Fustat-Bold',
+    color: '#FFFFFF',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6ad400', // Texto verde
-    textAlign: 'center',
-    marginBottom: 20,
+    fontSize: 36,
+    fontFamily: 'Fustat-Light',
+    color: '#FFFFFF',
+    lineHeight: 48,
   },
+  formContainer: {
+    width: '100%',
+    marginBottom: screenHeight * 0.02,
+  },
+  input: {
+    backgroundColor: '#1a1a1a',
+    color: '#fff',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    width: '100%',
+    minHeight: 60,
+    fontSize: 16,
+    fontFamily: 'Fustat-Regular',
+  },
+  passwordInputContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    width: '100%',
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+    position: 'relative',
+  },
+  passwordTextInput: {
+    flex: 1,
+    color: '#fff',
+    paddingVertical: 12,
+    paddingLeft: 15,
+    paddingRight: 50,
+    fontSize: 16,
+    fontFamily: 'Fustat-Regular',
+  },
+  passwordToggleIcon: {
+    position: 'absolute',
+    right: 15,
+    padding: 5,
+  },
+  inputError: {
+    borderColor: '#FF6347',
+    borderWidth: 1,
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: screenHeight * 0.03,
+  },
+  forgotPasswordText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Fustat-Medium',
+  },
+  buttonContainer: {
+  width: '100%',
+  alignItems: 'center',
+  marginTop: 10,
+},
+roundedButton: {
+  marginTop: 200,
+  backgroundColor: '#82CD32',
+  paddingHorizontal: 170,
+  paddingVertical: 16,
+  borderRadius: 30,
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+buttonText: {
+  color: '#000000',
+  fontSize: 16,
+  fontWeight: 'bold',
+  fontFamily: 'Fustat-Bold', 
+},
 });
 
 export default LoginScreen;
