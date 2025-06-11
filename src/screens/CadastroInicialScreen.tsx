@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     fontSize: screenWidth * 0.04,
   },
   buttonContainer: {
-    paddingVertical: 20,
+    paddingVertical: 44,
     alignItems: 'center',
   },
   roundedButton: {
