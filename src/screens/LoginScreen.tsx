@@ -14,6 +14,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -25,6 +26,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [senhaError, setSenhaError] = useState(false);
+
+  const { t } = useTranslation();
 
   const validateFields = (): boolean => {
     Keyboard.dismiss();
@@ -52,8 +55,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       navigation.navigate('ProgressoDetalhado');
     } else {
       Alert.alert(
-        'Campos obrigatórios',
-        'Por favor, preencha todos os campos corretamente.'
+        t('cadastro.requiredFields'),
+        t('cadastro.fillAllFields')
       );
     }
   };
@@ -63,13 +66,14 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <View style={styles.headerContainer}>
-            <Text style={styles.title}>Entrar</Text>
-            <Text style={styles.subtitle}>Bem-vindo de volta! Continue sua jornada.</Text>
+            <Text style={styles.title}>{t('login.title')}</Text>
+            <Text style={styles.subtitle}>{t('login.subtitleLine1')}</Text>
+            <Text style={styles.subtitle}>{t('login.subtitleLine2')}</Text>
           </View>
 
           <View style={styles.formContainer}>
             <TextInput
-              placeholder="Email"
+              placeholder={t('login.emailPlaceholder')}
               placeholderTextColor="#ccc"
               style={[styles.input, emailError && styles.inputError]}
               keyboardType="email-address"
@@ -83,7 +87,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
             <View style={[styles.passwordInputContainer, senhaError && styles.inputError]}>
               <TextInput
-                placeholder="Senha"
+                placeholder={t('login.passwordPlaceholder')}
                 placeholderTextColor="#ccc"
                 style={styles.passwordTextInput}
                 secureTextEntry={!showPassword}
@@ -103,17 +107,19 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             <TouchableOpacity style={styles.forgotPasswordContainer} activeOpacity={0.7}>
-              <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
+              <Text style={styles.forgotPasswordText}>
+                {t('login.forgotPassword')}
+              </Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.buttonContainer}>
-  <TouchableOpacity onPress={handleLogin} activeOpacity={0.8}>
-    <View style={[styles.roundedButton, { backgroundColor: '#82CD32' }]}>
-      <Text style={styles.buttonText}>Entrar</Text>
-    </View>
-  </TouchableOpacity>
-</View>
+            <TouchableOpacity onPress={handleLogin} activeOpacity={0.8}>
+              <View style={[styles.roundedButton, { backgroundColor: '#82CD32' }]}>
+                <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
@@ -137,15 +143,15 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 50,
-    fontSize: 36,
+    fontSize: 30,
     fontFamily: 'Fustat-Bold',
     color: '#FFFFFF',
   },
   subtitle: {
-    fontSize: 36,
+    fontSize: 30,
     fontFamily: 'Fustat-Light',
     color: '#FFFFFF',
-    lineHeight: 48,
+    lineHeight: 36,
   },
   formContainer: {
     width: '100%',
@@ -200,25 +206,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Fustat-Medium',
   },
   buttonContainer: {
-  width: '100%',
-  alignItems: 'center',
-  marginTop: 10,
-},
-roundedButton: {
-  marginTop: 200,
-  backgroundColor: '#82CD32',
-  paddingHorizontal: 170,
-  paddingVertical: 16,
-  borderRadius: 30,
-  alignItems: 'center',
-  justifyContent: 'center',
-},
-buttonText: {
-  color: '#000000',
-  fontSize: 16,
-  fontWeight: 'bold',
-  fontFamily: 'Fustat-Bold', 
-},
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  roundedButton: {
+    marginTop: 200,
+    backgroundColor: '#82CD32',
+    paddingHorizontal: 170,
+    paddingVertical: 16,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'Fustat-Bold',
+  },
 });
 
 export default LoginScreen;

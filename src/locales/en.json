@@ -21,8 +21,8 @@
       "genderWoman": "Woman",
       "activityLevelPlaceholder": "Activity Level...",
       "activityLevelLight": "Light",
-      "activityLevelModerate": "Moderate",
-      "activityLevelIntense": "Intense",
+      "activityLevelModerado": "Moderate",
+      "activityLevelIntenso": "Intense",
       "currentWeightPlaceholder": "Current Weight",
       "targetWeightPlaceholder": "Target Weight",
       "objectivePlaceholder": "Objective...",
@@ -53,6 +53,15 @@
       "registrationCompleteMessage": "Your registration was successful! You can now log in.",
       "arrowIcon": "→",
       "alertButtonUnderstand": "Understand"
+    },
+    "login": {
+      "title": "Log In",
+      "subtitleLine1": "Welcome back!",
+      "subtitleLine2": "Continue your journey.",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "forgotPassword": "Forgot your password?",
+      "loginButton": "Log In"
     }
   }
 }
