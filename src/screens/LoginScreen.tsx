@@ -9,7 +9,7 @@ import {
   Dimensions,
   SafeAreaView,
   TouchableWithoutFeedback,
-  Alert,
+  Modal,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
@@ -26,6 +26,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [senhaError, setSenhaError] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const { t } = useTranslation();
 
@@ -54,10 +55,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       console.log('Login com:', { email, senha });
       navigation.navigate('ProgressoDetalhado');
     } else {
-      Alert.alert(
-        t('cadastro.requiredFields'),
-        t('cadastro.fillAllFields')
-      );
+      setModalVisible(true);
     }
   };
 
@@ -120,6 +118,27 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               </View>
             </TouchableOpacity>
           </View>
+
+          {/* Modal Customizado */}
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{t('cadastro.requiredFields')}</Text>
+                <Text style={styles.modalText}>{t('cadastro.fillAllFields')}</Text>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.modalButton}
+                >
+                  <Text style={styles.modalButtonText}>OK</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
@@ -223,6 +242,53 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'Fustat-Bold',
+  },
+
+  
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a',
+    padding: 25,
+    borderRadius: 20,
+    alignItems: 'center',
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    color: '#FF6347',
+    fontSize: 20,
+    fontWeight: 'bold',
+    fontFamily: 'Fustat-Bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: 'Fustat-Regular',
+    marginBottom: 20,
+  },
+  modalButton: {
+    backgroundColor: '#82CD32',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  modalButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 16,
     fontFamily: 'Fustat-Bold',
   },
 });
