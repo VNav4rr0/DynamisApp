@@ -50,15 +50,16 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     return isValid;
   };
 
-  const handleLogin = () => {
-    if (validateFields()) {
-      console.log('Login com:', { email, senha });
-      navigation.navigate('ProgressoDetalhado');
-    } else {
-      setModalVisible(true);
-    }
-  };
+  // const handleLogin = () => {
+  //   if (validateFields()) {
+  //     console.log('Login com:', { email, senha });
+  //     navigation.navigate('ProgressoDetalhado');
+  //   } else {
+  //     setModalVisible(true);
+  //   }
+  // };
 
+  
   return (
     <SafeAreaView style={styles.safeArea}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -112,7 +113,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={handleLogin} activeOpacity={0.8}>
+            <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
               <View style={[styles.roundedButton, { backgroundColor: '#82CD32' }]}>
                 <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
               </View>
@@ -226,13 +227,13 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    alignItems: 'center',
-    marginTop: 10,
+    display:"flex",
+    marginTop:200,
   },
   roundedButton: {
-    marginTop: 200,
     backgroundColor: '#82CD32',
-    paddingHorizontal: 170,
+    paddingHorizontal:44,
+    width:"100%",
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
@@ -241,8 +242,10 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#000000',
     fontSize: 16,
+    width:"100%",
     fontWeight: 'bold',
     fontFamily: 'Fustat-Bold',
+    textAlign:"center",  
   },
 
   

@@ -15,7 +15,7 @@ const BoasVindasScreen: React.FC<BoasVindasScreenProps> = ({ navigation }) => {
     <ImageBackground source={require('../../assets/background.png')} style={styles.container}>
       
       <View style={styles.header}>
-        {/* ✅ O texto "Dynamis" foi removido, deixando só o ícone */}
+        
         
         <LanguageSwitcherDropdown />
       </View>
