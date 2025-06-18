@@ -22,6 +22,7 @@
       },
       "edgeToEdgeEnabled": true
     },
+    
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -29,5 +30,10 @@
       "expo-font",
       "expo-localization"
     ]
+  },
+  "androidNavigationBar": {
+      "backgroundColor": "#000000",
+      "barStyle": "light-content"
+    }
   }
-}
+
