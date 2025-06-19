@@ -62,6 +62,24 @@
       "passwordPlaceholder": "Password",
       "forgotPassword": "Forgot your password?",
       "loginButton": "Log In"
+    },
+    "progress": {
+      "title": "Your Progress",
+      "subtitle": "Track your progress and see how close you are to your goal!",
+      "period_1month": "1 month",
+      "period_3months": "3 months",
+      "period_6months": "6 months",
+      "period_1year": "1 year",
+      "period_more": "More",
+      "food_goal_title": "Food Goal",
+      "proteins": "Proteins",
+      "carbohydrates": "Carbohydrates",
+      "healthy_fats": "Healthy Fats"
+    },
+    "navbar": {
+      "home": "Home",
+      "goals": "Goals",
+      "profile": "Profile"
     }
   }
 }

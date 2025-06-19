@@ -62,6 +62,24 @@
       "passwordPlaceholder": "Senha",
       "forgotPassword": "Esqueceu sua senha?",
       "loginButton": "Entrar"
+    },
+    "progress": {
+      "title": "Seu Progresso",
+      "subtitle": "Acompanhe seu progresso e observe o quanto está perto da sua meta!",
+      "period_1month": "1 mês",
+      "period_3months": "3 meses",
+      "period_6months": "6 meses",
+      "period_1year": "1 ano",
+      "period_more": "Mais",
+      "food_goal_title": "Meta Alimentar",
+      "proteins": "Proteínas",
+      "carbohydrates": "Carboidratos",
+      "healthy_fats": "Gorduras Saudáveis"
+    },
+    "navbar": {
+      "home": "Home",
+      "goals": "Metas",
+      "profile": "Perfil"
     }
   }
 }

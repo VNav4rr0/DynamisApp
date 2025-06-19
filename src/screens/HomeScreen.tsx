@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as NavigationBar from 'expo-navigation-bar';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +55,8 @@ const DayButton: React.FC<DayButtonProps> = ({ day, label, isActive, isCompleted
 
 
 const HomeScreen: React.FC = () => {
+  const navigation = useNavigation();
+
   const [currentDayIndex, setCurrentDayIndex] = useState<number>(0);
   const [currentStreak, setCurrentStreak] = useState<number>(1);
   const [completedDays, setCompletedDays] = useState<string[]>(['Seg']);
@@ -291,7 +294,7 @@ const HomeScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navButton} onPress={() => setActiveTab('insights')}>
+          <TouchableOpacity style={styles.navButton} onPress={() => { setActiveTab('insights'); navigation.navigate('ProgressoDetalhado'); }}>
             <View style={styles.navButtonContent}>
               <MaterialIcons name="insights" size={26} color={activeTab === 'insights' ? '#000' : '#FFF'} />
               {activeTab === 'insights' && <Text style={styles.navText}>Metas</Text>}
