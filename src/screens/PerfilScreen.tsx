@@ -191,20 +191,29 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
             <Text style={styles.sectionSubtitle}>Deixe seu Dynamis mais eficaz adicionando seu nutricionista</Text>
 
             <View style={styles.requestCard}>
-                <MaterialCommunityIcons name="file-document-outline" size={48} color="#E0E0E0" />
-                <Text style={styles.requestCardText}>Envie solicitação para o nutricionista</Text>
-                
-                <TouchableOpacity 
-                style={[
-                    styles.chipButton,
-                    requestStatus === 'sent' && styles.chipButtonSent
-                ]}
-                onPress={handleSendRequest}
-                disabled={requestStatus !== 'idle'}
-                >
-                {renderChipContent()}
-                </TouchableOpacity>
-            </View>
+  <MaterialCommunityIcons name="file-document-outline" size={48} color="#E0E0E0" />
+  <Text style={styles.requestCardText}>Envie solicitação para o nutricionista</Text>
+  
+  <TouchableOpacity 
+    style={[
+      styles.chipButton,
+      requestStatus === 'sent' && styles.chipButtonSent
+    ]}
+    onPress={handleSendRequest}
+    disabled={requestStatus !== 'idle'}
+  >
+    {renderChipContent()}
+  </TouchableOpacity>
+
+  {/* Botão "Entrar Nutri" */}
+ <TouchableOpacity
+  style={[styles.chipButton, { marginTop: 12 }]}
+  onPress={() => navigation.navigate('Nutricionista')}
+>
+  <Text style={styles.chipButtonText}>Entrar Nutri</Text>
+</TouchableOpacity>
+
+</View>
         </View>
       </ScrollView>
 
