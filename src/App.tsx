@@ -20,6 +20,7 @@ import ProgressoDetalhadoScreen from '../src/screens/ProgressoDetalhadoScreen';
 import CadastroInicialScreen from '../src/screens/CadastroInicialScreen';
 import DefinirMetasScreen from '../src/screens/DefinirMetasScreen';
 import LoginScreen from '../src/screens/LoginScreen';
+import PerfilScreen from '../src/screens/PerfilScreen';
 
 // Definição de tipo das telas para o navegador
 export type RootStackParamList = {
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   DefinirMetas: undefined;
   Login: undefined;
   BoasVindas: undefined;
+  Perfil: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -102,8 +104,9 @@ export default function App() {
             <Stack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="ProgressoDetalhado" component={ProgressoDetalhadoScreen} />
+            <Stack.Screen name="Perfil" component={PerfilScreen} />
           </Stack.Navigator>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
         </NavigationContainer>
       </PaperProvider>
     </View>

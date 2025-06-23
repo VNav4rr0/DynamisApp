@@ -77,7 +77,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               style={[styles.input, emailError && styles.inputError]}
               keyboardType="email-address"
               value={email}
-              onChangeText={(text) => {
+              onChangeText={(text: string) => {
                 setEmail(text);
                 setEmailError(false);
               }}
@@ -91,7 +91,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 style={styles.passwordTextInput}
                 secureTextEntry={!showPassword}
                 value={senha}
-                onChangeText={(text) => {
+                onChangeText={(text: string) => {
                   setSenha(text);
                   setSenhaError(false);
                 }}
