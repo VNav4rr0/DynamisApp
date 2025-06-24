@@ -21,45 +21,27 @@ const { height: screenHeight } = Dimensions.get('window');
 type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
+  const inputRefs = React.useRef<Array<TextInput | null>>([]);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [senhaError, setSenhaError] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-
+  const [codeModalVisible, setCodeModalVisible] = useState(false);
+  const [verifiedModalVisible, setVerifiedModalVisible] = useState(false);
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const { t } = useTranslation();
 
-  const validateFields = (): boolean => {
-    Keyboard.dismiss();
-    let isValid = true;
+  const handleCodeChange = (text: string, index: number) => {
+    const newCode = [...code];
+    newCode[index] = text;
+    setCode(newCode);
 
-    setEmailError(false);
-    setSenhaError(false);
-
-    if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) {
-      setEmailError(true);
-      isValid = false;
+    if (text && index < 5) {
+      inputRefs.current[index + 1]?.focus();
     }
-
-    if (!senha.trim() || senha.length < 6) {
-      setSenhaError(true);
-      isValid = false;
-    }
-
-    return isValid;
   };
 
-  // const handleLogin = () => {
-  //   if (validateFields()) {
-  //     console.log('Login com:', { email, senha });
-  //     navigation.navigate('ProgressoDetalhado');
-  //   } else {
-  //     setModalVisible(true);
-  //   }
-  // };
-
-  
   return (
     <SafeAreaView style={styles.safeArea}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -105,41 +87,101 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-           <TouchableOpacity
-         style={styles.forgotPasswordContainer}
-        activeOpacity={0.7}
-        onPress={() => navigation.navigate('RecuperarSenha')}
->
-  <Text style={styles.forgotPasswordText}>
-    {t('login.forgotPassword')}
-  </Text>
-</TouchableOpacity>
+            <TouchableOpacity
+              style={styles.forgotPasswordContainer}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('RecuperarSenha')}
+            >
+              <Text style={styles.forgotPasswordText}>{t('login.forgotPassword')}</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
-              <View style={[styles.roundedButton, { backgroundColor: '#82CD32' }]}>
+              <View style={styles.roundedButton}>
                 <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
               </View>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setCodeModalVisible(true)}
+              style={styles.codeButton}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.codeButtonText}>{t('login.enterWithCode')}</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Modal Customizado */}
-          <Modal
-            animationType="fade"
-            transparent={true}
-            visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
-          >
+          {/* Modal Código */}
+          <Modal visible={codeModalVisible} animationType="fade" transparent>
             <View style={styles.modalOverlay}>
-              <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>{t('cadastro.requiredFields')}</Text>
-                <Text style={styles.modalText}>{t('cadastro.fillAllFields')}</Text>
+              <View style={styles.codeModalContent}>
+                <Icon name="person-circle-outline" size={48} color="#82CD32" />
+                <Text style={styles.codeModalTitle}>{t('modalCode.title')}</Text>
+                <Text style={styles.codeModalSubtitle}>{t('modalCode.subtitle')}</Text>
+
+                <View style={styles.codeInputsRow}>
+                  {code.map((digit, index) => (
+                    <React.Fragment key={index}>
+                      {index === 3 && <Text style={styles.dash}>-</Text>}
+                      <TextInput
+                        ref={(ref) => (inputRefs.current[index] = ref)}
+                        style={styles.codeInput}
+                        maxLength={1}
+                        keyboardType="numeric"
+                        value={digit}
+                        onChangeText={(text) => handleCodeChange(text, index)}
+                        onKeyPress={({ nativeEvent }) => {
+                          if (nativeEvent.key === 'Backspace' && code[index] === '' && index > 0) {
+                            inputRefs.current[index - 1]?.focus();
+                          }
+                        }}
+                        autoFocus={index === 0}
+                      />
+                    </React.Fragment>
+                  ))}
+                </View>
+
+                <View style={styles.codeModalActions}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCodeModalVisible(false);
+                      navigation.navigate('Login');
+                    }}
+                  >
+                    <Text style={styles.codeBackText}>{t('modalCode.back')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.codeVerifyButton}
+                    onPress={() => {
+                      setCodeModalVisible(false);
+                      setVerifiedModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.codeVerifyText}>{t('modalCode.verify')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* Modal Verificado */}
+          <Modal visible={verifiedModalVisible} animationType="fade" transparent>
+            <View style={styles.modalOverlay}>
+              <View style={styles.verifiedModal}>
+                <Icon name="checkmark-circle" size={60} color="#82CD32" />
+                <Text style={styles.verifiedTitle}>{t('modalVerified.title')}</Text>
+                <Text style={styles.verifiedSubtitle}>
+                  {t('modalVerified.subtitle', { name: 'Victor Taveira' })}
+                </Text>
                 <TouchableOpacity
-                  onPress={() => setModalVisible(false)}
-                  style={styles.modalButton}
+                  style={styles.verifiedButton}
+                  onPress={() => {
+                    setVerifiedModalVisible(false);
+                    navigation.navigate('Home');
+                  }}
                 >
-                  <Text style={styles.modalButtonText}>OK</Text>
+                  <Text style={styles.verifiedButtonText}>{t('modalVerified.enter')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -151,10 +193,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
+  safeArea: { flex: 1, backgroundColor: '#000000' },
   container: {
     marginTop: 60,
     flex: 1,
@@ -216,13 +255,20 @@ const styles = StyleSheet.create({
     right: 15,
     padding: 5,
   },
+  dash: {
+    fontSize: 24,
+    color: '#fff',
+    marginHorizontal: 6,
+    alignSelf: 'center',
+    fontWeight: 'bold',
+  },
   inputError: {
     borderColor: '#FF6347',
     borderWidth: 1,
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: screenHeight * 0.03,
+    marginBottom: 20,
   },
   forgotPasswordText: {
     color: '#FFFFFF',
@@ -231,72 +277,133 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    display:"flex",
-    marginTop:200,
+    marginTop: 180,
   },
   roundedButton: {
     backgroundColor: '#82CD32',
-    paddingHorizontal:44,
-    width:"100%",
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 12,
   },
   buttonText: {
-    color: '#000000',
+    color: '#000',
     fontSize: 16,
-    width:"100%",
     fontWeight: 'bold',
     fontFamily: 'Fustat-Bold',
-    textAlign:"center",  
   },
-
-  
+  codeButton: {
+    borderColor: '#82CD32',
+    borderWidth: 1.5,
+    borderRadius: 30,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  codeButtonText: {
+    color: '#82CD32',
+    fontSize: 16,
+    fontFamily: 'Fustat-Bold',
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
-    backgroundColor: '#1a1a1a',
+  codeModalContent: {
+    width: '85%',
+    backgroundColor: '#111',
     padding: 25,
     borderRadius: 20,
     alignItems: 'center',
-    width: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  modalTitle: {
-    color: '#FF6347',
+  codeModalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    fontFamily: 'Fustat-Bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalText: {
     color: '#fff',
-    fontSize: 16,
+    fontFamily: 'Fustat-Bold',
+    marginTop: 10,
+  },
+  codeModalSubtitle: {
+    color: '#ccc',
+    fontSize: 14,
     textAlign: 'center',
+    marginVertical: 12,
     fontFamily: 'Fustat-Regular',
+  },
+  codeInputsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
     marginBottom: 20,
   },
-  modalButton: {
+  codeInput: {
+    backgroundColor: '#1a1a1a',
+    width: 40,
+    height: 50,
+    textAlign: 'center',
+    borderRadius: 8,
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Fustat-Bold',
+  },
+  codeModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+  },
+  codeBackText: {
+    color: '#82CD32',
+    fontSize: 16,
+    left: 130,
+    marginTop: 8,
+    fontFamily: 'Fustat-Regular',
+  },
+  codeVerifyButton: {
     backgroundColor: '#82CD32',
-    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,
+    borderRadius: 10,
   },
-  modalButtonText: {
+  codeVerifyText: {
     color: '#000',
     fontWeight: 'bold',
     fontSize: 16,
     fontFamily: 'Fustat-Bold',
+  },
+  verifiedModal: {
+    width: '85%',
+    backgroundColor: '#111',
+    padding: 30,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  verifiedTitle: {
+    fontSize: 20,
+    fontFamily: 'Fustat-Bold',
+    color: '#fff',
+    marginVertical: 10,
+  },
+  verifiedSubtitle: {
+    textAlign: 'center',
+    color: '#ccc',
+    fontSize: 14,
+    fontFamily: 'Fustat-Regular',
+    marginBottom: 25,
+  },
+  verifiedButton: {
+    backgroundColor: '#82CD32',
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: 'center',
+  },
+  verifiedButtonText: {
+    color: '#000',
+    fontFamily: 'Fustat-Bold',
+    fontSize: 16,
   },
 });
 

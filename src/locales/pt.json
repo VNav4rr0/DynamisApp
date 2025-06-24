@@ -55,14 +55,26 @@
       "alertButtonUnderstand": "Entendi"
     },
     "login": {
-      "title": "Entrar",
-      "subtitleLine1": "Bem-vindo de volta!",
-      "subtitleLine2": "Continue sua jornada.",
-      "emailPlaceholder": "E-mail",
-      "passwordPlaceholder": "Senha",
-      "forgotPassword": "Esqueceu sua senha?",
-      "loginButton": "Entrar"
-    },
+    "title": "Bem-vindo",
+    "subtitleLine1": "Vamos monitorar",
+    "subtitleLine2": "a saúde do seu pet!",
+    "emailPlaceholder": "Digite seu e-mail",
+    "passwordPlaceholder": "Digite sua senha",
+    "forgotPassword": "Esqueci minha senha",
+    "loginButton": "Entrar",
+    "enterWithCode": "Entrar com código"
+  },
+   "modalCode": {
+    "title": "Código de Acesso",
+    "subtitle": "Insira o código de verificação da conta de seu cliente",
+    "verify": "Verificar",
+    "back": "Voltar"
+  },
+   "modalVerified": {
+    "title": "Verificado!",
+    "subtitle": "Vamos começar a transformar os resultados de {{name}}.",
+    "enter": "Entrar"
+  },
     "recuperarSenha": {
   "title": "Recuperar Senha",
   "descriptionLine1": "Fique tranquilo(a)!",
