@@ -207,8 +207,10 @@ const styles = StyleSheet.create({
   headerContainer: {
     position: 'relative',
     height: 200,
+    width: 450,
     justifyContent: 'flex-end',
-    paddingBottom: 24,
+    paddingBottom: 34,
+    left: -20,
   },
   headerImage: {
     marginBottom: -50,
@@ -381,8 +383,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 10,
     
-    
-
   },
   logoutButton: {
     marginTop: 16,
