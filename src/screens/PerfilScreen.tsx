@@ -168,16 +168,21 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
               />
             </View>
 
-            <View style={styles.divider} />
+           // ...
+          <View style={styles.divider} />
 
-            <TouchableOpacity style={styles.menuRow}>
-              <MaterialCommunityIcons name="cog-outline" size={24} color="#E0E0E0" />
-              <View style={styles.textContainer}>
-                  <Text style={styles.rowTitle}>Gerenciar Informações</Text>
-                  <Text style={styles.rowSubtitle}>Atualize seu dados pessoais</Text>
-              </View>
-              <MaterialCommunityIcons name="arrow-top-right" size={20} color="#E0E0E0" />
-            </TouchableOpacity>
+          {/* AGORA O BOTÃO NAVEGA PARA A TELA CORRETA */}
+          <TouchableOpacity 
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('GerenciarInformacoes')}
+          >
+            <MaterialCommunityIcons name="cog-outline" size={24} color="#E0E0E0" />
+            <View style={styles.textContainer}>
+              <Text style={styles.rowTitle}>Gerenciar Informações</Text>
+              <Text style={styles.rowSubtitle}>Atualize seu dados pessoais</Text>
+            </View>
+            <MaterialCommunityIcons name="arrow-top-right" size={20} color="#E0E0E0" />
+          </TouchableOpacity>
         </View>
 
         {/* Botão Sair */}

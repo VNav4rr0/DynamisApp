@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 50,
-    fontSize: 30,
+    fontSize: 28,
     fontFamily: 'Fustat-Bold',
     color: '#FFFFFF',
   },
