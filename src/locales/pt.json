@@ -63,6 +63,14 @@
       "forgotPassword": "Esqueceu sua senha?",
       "loginButton": "Entrar"
     },
+    "recuperarSenha": {
+  "title": "Recuperar Senha",
+  "descriptionLine1": "Fique tranquilo(a)!",
+  "descriptionLine2": "Envie seu e-mail para alterar sua senha.",
+  "emailPlaceholder": "E-mail",
+  "sendButton": "Enviar"
+},
+
     "progress": {
       "title": "Seu Progresso",
       "subtitle": "Acompanhe seu progresso e observe o quanto está perto da sua meta!",

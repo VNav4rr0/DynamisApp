@@ -22,6 +22,7 @@ import DefinirMetasScreen from '../src/screens/DefinirMetasScreen';
 import LoginScreen from '../src/screens/LoginScreen';
 import PerfilScreen from '../src/screens/PerfilScreen';
 import NutricionistaScreen from '../src/screens/NutricionistaScreen';
+import RecuperarSenhaScreen from '../src/screens/RecuperarSenhaScreen';
 
 // Definição de tipo das telas para o navegador
 export type RootStackParamList = {
@@ -30,9 +31,11 @@ export type RootStackParamList = {
   CadastroInicial: undefined;
   DefinirMetas: undefined;
   Login: undefined;
+  RecuperarSenha: undefined;
   BoasVindas: undefined;
   Perfil: undefined;
   Nutricionista: undefined;
+  
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -102,12 +105,15 @@ export default function App() {
           >
             <Stack.Screen name="BoasVindas" component={BoasVindasScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="RecuperarSenha" component={RecuperarSenhaScreen} />
             <Stack.Screen name="CadastroInicial" component={CadastroInicialScreen} />
             <Stack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
             <Stack.Screen name="Home" component={HomeScreen} />
             <Stack.Screen name="ProgressoDetalhado" component={ProgressoDetalhadoScreen} />
             <Stack.Screen name="Perfil" component={PerfilScreen} />
             <Stack.Screen name="Nutricionista" component={NutricionistaScreen} />
+            
+
           </Stack.Navigator>
           <StatusBar style="dark" />
         </NavigationContainer>

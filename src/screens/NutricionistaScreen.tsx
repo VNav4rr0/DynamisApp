@@ -206,11 +206,11 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     position: 'relative',
-    height: 200,
+    height: 250,
     width: 450,
     justifyContent: 'flex-end',
     paddingBottom: 34,
-    left: -20,
+    left: -30,
   },
   headerImage: {
     marginBottom: -50,

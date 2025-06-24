@@ -63,6 +63,13 @@
       "forgotPassword": "Forgot your password?",
       "loginButton": "Log In"
     },
+  "recuperarSenha": {
+  "title": "Recover Password",
+  "descriptionLine1": "Don't worry!",
+  "descriptionLine2": "Enter your email to reset your password.",
+  "emailPlaceholder": "E-mail",
+  "sendButton": "Send"
+},
     "progress": {
       "title": "Your Progress",
       "subtitle": "Track your progress and see how close you are to your goal!",
@@ -80,6 +87,8 @@
       "home": "Home",
       "goals": "Goals",
       "profile": "Profile"
+
+      
     }
   }
 }
