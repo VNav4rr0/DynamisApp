@@ -15,11 +15,11 @@ import { LineChart } from 'react-native-chart-kit';
 const { width } = Dimensions.get('window');
 
 const refeicoes = [
-  { nome: 'Café da Manhã', icone: 'coffee' },
+  { nome: 'Café da Manhã', icone: 'coffee-outline' },
   { nome: 'Almoço', icone: 'silverware-fork-knife' },
-  { nome: 'Café da Tarde', icone: 'coffee' },
+  { nome: 'Café da Tarde', icone: 'coffee-outline' },
   { nome: 'Jantar', icone: 'silverware-fork-knife' },
-  { nome: 'Ceia', icone: 'pine-tree' },
+  { nome: 'Ceia', icone: 'food-apple' },
 ];
 
 const PERIODS = ['1m', '3m', '6m', '1a', 'mais'];
@@ -31,22 +31,20 @@ const PERIOD_LABELS = {
   'mais': 'Mais',
 };
 
-const getChartData = (period) => {
+const getChartData = (period: string) => {
   const dataPoints = {
-    '1m': [2, 5, 3, 3, 6, 8, 9],
+    '1m': [2, 5, 3, 3, 6, 8, 9, 7, 6, 5, 4, 3],
     '3m': [3, 4, 3, 7, 6, 8, 7, 8, 9, 6, 7, 8],
-    '6m': [4, 5, 6, 5, 6, 7],
+    '6m': [4, 5, 6, 5, 6, 7, 6, 5, 6, 7, 5, 4],
     '1a': [2, 4, 5, 3, 6, 7, 8, 5, 6, 7, 8, 9],
-    'mais': [2, 3, 4, 5, 6, 7],
+    'mais': [2, 3, 4, 5, 6, 7, 8, 9, 7, 6, 5, 4],
   };
 
   return {
-    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago'],
+    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
     datasets: [
       {
         data: dataPoints[period] || dataPoints['1m'],
-        color: () => '#AEF359',
-        strokeWidth: 3,
       },
     ],
   };
@@ -76,7 +74,11 @@ const NutricionistaScreen = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
       <View style={styles.headerContainer}>
-        <Image source={require('../../assets/background_nutri.png')} style={styles.headerImage} resizeMode="cover" />
+        <Image
+          source={require('../../assets/background_nutri.png')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
         <View style={styles.headerOverlay}></View>
       </View>
 
@@ -100,16 +102,27 @@ const NutricionistaScreen = () => {
       </View>
 
       <View style={styles.chartWrapper}>
-        <LineChart
-          data={getChartData(activePeriod)}
-          width={width - 40}
-          height={220}
-          chartConfig={chartConfig}
-          bezier
-          fromZero
-          withVerticalLabels
-          style={styles.chart}
-        />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <LineChart
+            data={{
+              labels: getChartData(activePeriod).labels,
+              datasets: [
+                {
+                  data: getChartData(activePeriod).datasets[0].data,
+                  color: () => '#AEF359',
+                  strokeWidth: 3,
+                },
+              ],
+            }}
+            width={1000}
+            height={220}
+            chartConfig={chartConfig}
+            bezier
+            fromZero
+            withVerticalLabels
+            style={styles.chart}
+          />
+        </ScrollView>
       </View>
 
       <View style={styles.section}>
@@ -119,26 +132,14 @@ const NutricionistaScreen = () => {
         </Text>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.weekDaysContainer}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekDaysContainer}>
         {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day, index) => (
           <TouchableOpacity
             key={index}
             onPress={() => setSelectedDay(index)}
-            style={[
-              styles.dayButton,
-              selectedDay === index && styles.dayButtonActive,
-            ]}
+            style={[styles.dayButton, selectedDay === index && styles.dayButtonActive]}
           >
-            <Text
-              style={[
-                styles.dayButtonText,
-                selectedDay === index && styles.dayButtonTextActive,
-              ]}
-            >
+            <Text style={[styles.dayButtonText, selectedDay === index && styles.dayButtonTextActive]}>
               {day}
             </Text>
           </TouchableOpacity>
@@ -150,7 +151,7 @@ const NutricionistaScreen = () => {
           <View key={index} style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.iconCircle}>
-                <MaterialCommunityIcons name={ref.icone} size={20} color="#FFF" />
+                <MaterialCommunityIcons name={ref.icone} size={20} color="#82CD32" />
               </View>
               <Text style={styles.cardTitle}>{ref.nome}</Text>
             </View>
@@ -168,7 +169,6 @@ const NutricionistaScreen = () => {
         ))}
       </ScrollView>
 
-      {/* AVISOS IMPORTANTES COM ÍCONE */}
       <View style={styles.importantBox}>
         <View style={styles.importantHeader}>
           <MaterialCommunityIcons name="alert-circle" size={20} color="#AEF359" style={{ marginRight: 6 }} />
@@ -218,13 +218,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '150%',
   },
-  overlay: {
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginHorizontal: 10,
-  },
+  headerOverlay: {},
   title: {
     color: '#FFF',
     fontSize: 28,
@@ -269,6 +263,20 @@ const styles = StyleSheet.create({
   chart: {
     borderRadius: 20,
   },
+  section: {
+    marginTop: 40,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    color: '#FFF',
+    fontSize: 27,
+    fontWeight: 'bold',
+    marginBottom: 7,
+  },
+  sectionSubtitle: {
+    color: '#bbb',
+    fontSize: 14,
+  },
   weekDaysContainer: {
     flexDirection: 'row',
     marginTop: 24,
@@ -292,20 +300,6 @@ const styles = StyleSheet.create({
   dayButtonTextActive: {
     color: '#000',
   },
-  section: {
-    marginTop: 40,
-    marginBottom: 10,
-  },
-  sectionTitle: {
-    color: '#FFF',
-    fontSize: 27,
-    fontWeight: 'bold',
-    marginBottom: 7,
-  },
-  sectionSubtitle: {
-    color: '#bbb',
-    fontSize: 14,
-  },
   horizontalScroll: {
     paddingVertical: 12,
   },
@@ -322,7 +316,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   iconCircle: {
-    backgroundColor: '#AEF359',
+    backgroundColor: '#264D1F',
     borderRadius: 20,
     padding: 6,
     marginRight: 8,
@@ -356,14 +350,14 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   importantBox: {
-  backgroundColor: '#1C1C1E',
-  borderRadius: 20,
-  padding: 16,
-  marginTop: 30,
-  borderWidth: 1,
-  borderColor: '#AEF359',
-  minHeight: 250,
-},
+    backgroundColor: '#1C1C1E',
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 30,
+    borderWidth: 1,
+    borderColor: '#AEF359',
+    minHeight: 250,
+  },
   importantHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -374,18 +368,17 @@ const styles = StyleSheet.create({
     color: '#AEF359',
     fontSize: 20,
     fontWeight: 'bold',
-   
   },
   footerText: {
     color: '#bbb',
-    fontSize: 13,
+    fontSize: 17,
     marginTop: 24,
     textAlign: 'center',
     paddingHorizontal: 10,
-    
   },
   logoutButton: {
-    marginTop: 16,
+    marginTop: 52,
+    marginBottom: 50,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
@@ -395,7 +388,6 @@ const styles = StyleSheet.create({
     color: '#AEF359',
     fontSize: 16,
     fontWeight: 'bold',
-    
   },
 });
 

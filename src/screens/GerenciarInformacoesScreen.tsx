@@ -3,25 +3,22 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView } from 
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
-// 1. Importe os tipos de navegação
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../App'; // ATENÇÃO: Ajuste o caminho para o seu App.tsx se necessário
-
-// 2. Crie um tipo para a navegação desta tela
-type GerenciarInformacoesNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 const GerenciarInformacoesScreen: React.FC = () => {
-  // 3. Aplique o tipo ao hook useNavigation
-  const navigation = useNavigation<GerenciarInformacoesNavigationProp>();
+  const navigation = useNavigation();
   const [genero, setGenero] = useState<'homem' | 'mulher'>('homem');
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* O botão de voltar agora tem a função goBack() e a navegação está corretamente tipada */}
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color="white" />
-        <Text style={styles.headerText}>Gerenciar Informações</Text>
-      </TouchableOpacity>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={24} color="white" style={{ marginBottom: -4 }} />
+        </TouchableOpacity>
+        <View>
+          <Text style={styles.headerText}>Gerenciar Informações</Text>
+          <View style={styles.headerLine} />
+        </View>
+      </View>
 
       {/* Dados Pessoais */}
       <View style={styles.card}>
@@ -55,7 +52,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
         <View style={styles.row}>
           <TextInput placeholder="Peso Atual" placeholderTextColor="#888" style={[styles.input, styles.halfInput]} />
           <View style={styles.arrowContainer}>
-            <MaterialIcons name="arrow-forward" size={20} color="#C2185B" />
+            <Ionicons name="arrow-forward" size={36} color="#C2185B" style={{ marginBottom: 8 }} />
           </View>
           <TextInput placeholder="Peso Meta" placeholderTextColor="#888" style={[styles.input, styles.halfInput]} />
         </View>
@@ -88,20 +85,30 @@ const GerenciarInformacoesScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingTop: 100,
+    paddingHorizontal: 20,
     backgroundColor: '#000',
-    paddingBottom: 60,
   },
-  backButton: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
     gap: 10,
+  },
+  backButton: {
+    marginTop: -4,
   },
   headerText: {
     color: '#FFF',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
+  },
+  headerLine: {
+    marginTop: 6,
+    height: 2,
+    backgroundColor: '#82CD32',
+    borderRadius: 2,
+    width: 180,
   },
   card: {
     backgroundColor: '#121212',
@@ -111,7 +118,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: '#FFF',
-    fontSize: 20,
+    fontSize: 30,
     fontWeight: 'bold',
     marginBottom: 16,
   },
@@ -165,7 +172,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 30,
   },
   saveButtonText: {
     color: '#000',
@@ -177,7 +184,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 30, // desce o botão "Sair da conta"
   },
   deleteButtonText: {
     color: 'red',
@@ -188,6 +195,7 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
     fontSize: 13,
+    marginTop: 20,
   },
 });
 

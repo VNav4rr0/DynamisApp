@@ -16,11 +16,13 @@ import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 
 const { width } = Dimensions.get('window');
 
-// Tipagem para a navegação
+
 type RootTabParamList = {
   Home: undefined;
   ProgressoDetalhado: undefined;
   Perfil: undefined;
+  GerenciarInformacoes: undefined;
+  Nutricionista: undefined; 
 };
 
 type ProfileScreenProps = BottomTabScreenProps<RootTabParamList, 'Perfil'>;
@@ -168,10 +170,10 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
               />
             </View>
 
-           // ...
+           
           <View style={styles.divider} />
 
-          {/* AGORA O BOTÃO NAVEGA PARA A TELA CORRETA */}
+          
           <TouchableOpacity 
             style={styles.menuRow}
             onPress={() => navigation.navigate('GerenciarInformacoes')}
