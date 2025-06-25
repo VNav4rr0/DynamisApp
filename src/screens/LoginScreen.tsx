@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,18 +10,25 @@ import {
   SafeAreaView,
   TouchableWithoutFeedback,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../App';
-import Icon from 'react-native-vector-icons/Ionicons';
+// A sua tipagem deve vir do seu navegador de autenticação, não do App.tsx geral.
+// Verifique o guia `dynamis_definitive_fix_v2` para a estrutura correta.
+import { AuthStackParamList } from '../App'; 
+import { Ionicons } from '@expo/vector-icons'; // Sua correção está correta
 import { useTranslation } from 'react-i18next';
+import CustomAlertModal from '../components/CustomAlertModal';
+
+// Usando a sintaxe de compatibilidade que definimos no firebaseConfig.ts
+import { auth } from '../../firebaseConfig/firebase';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-type LoginScreenProps = NativeStackScreenProps<RootStackParamList, 'Login'>;
+type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const inputRefs = React.useRef<Array<TextInput | null>>([]);
+  const inputRefs = useRef<Array<TextInput | null>>([]);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,16 +37,53 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [verifiedModalVisible, setVerifiedModalVisible] = useState(false);
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [isLoading, setIsLoading] = useState(false);
   const { t } = useTranslation();
+
+  const handleLogin = async () => {
+    if (!email.trim() || !senha.trim()) {
+      alert('Por favor, preencha o e-mail e a senha.');
+      return;
+    }
+    
+    setIsLoading(true);
+    Keyboard.dismiss();
+
+    try {
+      await auth.signInWithEmailAndPassword(email, senha);
+      // O "Guarda" no App.tsx fará a troca de telas automaticamente.
+    } catch (error: any) {
+      console.error("Erro no login: ", error);
+      alert('Erro de Login: O e-mail ou a senha estão incorretos.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleCodeChange = (text: string, index: number) => {
     const newCode = [...code];
-    newCode[index] = text;
+    newCode[index] = text.toUpperCase();
     setCode(newCode);
 
     if (text && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
+  };
+
+  const handleCodeVerify = () => {
+    const enteredCode = code.join('');
+    if (enteredCode.length === 6) {
+      setCodeModalVisible(false);
+      setVerifiedModalVisible(true);
+    } else {
+      alert('Por favor, digite o código completo de 6 dígitos.');
+    }
+  };
+
+  const handleVerifiedClose = () => {
+    setVerifiedModalVisible(false);
+    setCode(['', '', '', '', '', '']);
+    // A navegação não é mais necessária aqui
   };
 
   return (
@@ -83,7 +127,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                 style={styles.passwordToggleIcon}
                 activeOpacity={0.7}
               >
-                <Icon name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color="#ccc" />
+                <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color="#ccc" />
               </TouchableOpacity>
             </View>
 
@@ -97,9 +141,13 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
           </View>
 
           <View style={styles.buttonContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
+            <TouchableOpacity onPress={handleLogin} activeOpacity={0.8} disabled={isLoading}>
               <View style={styles.roundedButton}>
-                <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
+                {isLoading ? (
+                    <ActivityIndicator color="#000" />
+                ) : (
+                    <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
+                )}
               </View>
             </TouchableOpacity>
 
@@ -112,76 +160,64 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Modal Código */}
-          <Modal visible={codeModalVisible} animationType="fade" transparent>
+          {/* Code Modal */}
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={codeModalVisible}
+            onRequestClose={() => setCodeModalVisible(false)}
+          >
             <View style={styles.modalOverlay}>
               <View style={styles.codeModalContent}>
-                <Icon name="person-circle-outline" size={48} color="#82CD32" />
-                <Text style={styles.codeModalTitle}>{t('modalCode.title')}</Text>
-                <Text style={styles.codeModalSubtitle}>{t('modalCode.subtitle')}</Text>
-
+                <Ionicons name="lock-closed-outline" size={40} color="#82CD32" />
+                <Text style={styles.codeModalTitle}>Digite o código</Text>
+                <Text style={styles.codeModalSubtitle}>
+                  Insira o código de 6 dígitos enviado para você
+                </Text>
+                
                 <View style={styles.codeInputsRow}>
                   {code.map((digit, index) => (
-                    <React.Fragment key={index}>
-                      {index === 3 && <Text style={styles.dash}>-</Text>}
-                      <TextInput
-                        ref={(ref) => (inputRefs.current[index] = ref)}
-                        style={styles.codeInput}
-                        maxLength={1}
-                        keyboardType="numeric"
-                        value={digit}
-                        onChangeText={(text) => handleCodeChange(text, index)}
-                        onKeyPress={({ nativeEvent }) => {
-                          if (nativeEvent.key === 'Backspace' && code[index] === '' && index > 0) {
-                            inputRefs.current[index - 1]?.focus();
-                          }
-                        }}
-                        autoFocus={index === 0}
-                      />
-                    </React.Fragment>
+                    <TextInput
+                      key={index}
+                      ref={(ref) => (inputRefs.current[index] = ref)}
+                      style={styles.codeInput}
+                      value={digit}
+                      onChangeText={(text) => handleCodeChange(text, index)}
+                      keyboardType="default"
+                      maxLength={1}
+                      autoCapitalize="characters"
+                    />
                   ))}
                 </View>
 
                 <View style={styles.codeModalActions}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCodeModalVisible(false);
-                      navigation.navigate('Login');
-                    }}
-                  >
-                    <Text style={styles.codeBackText}>{t('modalCode.back')}</Text>
+                  <TouchableOpacity onPress={() => setCodeModalVisible(false)}>
+                    <Text style={styles.codeBackText}>Voltar</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.codeVerifyButton}
-                    onPress={() => {
-                      setCodeModalVisible(false);
-                      setVerifiedModalVisible(true);
-                    }}
-                  >
-                    <Text style={styles.codeVerifyText}>{t('modalCode.verify')}</Text>
+                  <TouchableOpacity onPress={handleCodeVerify} style={styles.codeVerifyButton}>
+                    <Text style={styles.codeVerifyText}>Verificar</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
           </Modal>
 
-          {/* Modal Verificado */}
-          <Modal visible={verifiedModalVisible} animationType="fade" transparent>
+          {/* Verified Modal */}
+          <Modal
+            animationType="fade"
+            transparent={true}
+            visible={verifiedModalVisible}
+            onRequestClose={handleVerifiedClose}
+          >
             <View style={styles.modalOverlay}>
               <View style={styles.verifiedModal}>
-                <Icon name="checkmark-circle" size={60} color="#82CD32" />
-                <Text style={styles.verifiedTitle}>{t('modalVerified.title')}</Text>
+                <Ionicons name="checkmark-circle-outline" size={60} color="#82CD32" />
+                <Text style={styles.verifiedTitle}>Código Verificado!</Text>
                 <Text style={styles.verifiedSubtitle}>
-                  {t('modalVerified.subtitle', { name: 'Victor Taveira' })}
+                  Seu código foi verificado com sucesso. Você será redirecionado.
                 </Text>
-                <TouchableOpacity
-                  style={styles.verifiedButton}
-                  onPress={() => {
-                    setVerifiedModalVisible(false);
-                    navigation.navigate('Home');
-                  }}
-                >
-                  <Text style={styles.verifiedButtonText}>{t('modalVerified.enter')}</Text>
+                <TouchableOpacity onPress={handleVerifiedClose} style={styles.verifiedButton}>
+                  <Text style={styles.verifiedButtonText}>Continuar</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -255,13 +291,6 @@ const styles = StyleSheet.create({
     right: 15,
     padding: 5,
   },
-  dash: {
-    fontSize: 24,
-    color: '#fff',
-    marginHorizontal: 6,
-    alignSelf: 'center',
-    fontWeight: 'bold',
-  },
   inputError: {
     borderColor: '#FF6347',
     borderWidth: 1,
@@ -286,6 +315,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+    minHeight: 58,
   },
   buttonText: {
     color: '#000',
@@ -357,9 +387,8 @@ const styles = StyleSheet.create({
   codeBackText: {
     color: '#82CD32',
     fontSize: 16,
-    left: 130,
-    marginTop: 8,
     fontFamily: 'Fustat-Regular',
+    alignSelf: 'center',
   },
   codeVerifyButton: {
     backgroundColor: '#82CD32',

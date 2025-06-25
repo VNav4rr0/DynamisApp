@@ -1,51 +1,83 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import '../src/i18n';
-import { View, StyleSheet } from 'react-native';
+import './src/i18n'; // Verifique se o caminho está correto
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
-
-// Imports do Firebase - Adicionados para o controle de autenticação
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '../firebaseConfig/firebase'; // <-- Verifique se o caminho para seu firebase.ts está correto
+import { auth } from '../firebaseConfig/firebase'; // Caminho para firebase na raiz (ajuste conforme necessário)
+import { MD3DarkTheme, Provider as PaperProvider } from 'react-native-paper';
 
-// Imports do React Native Paper
-import { 
-  MD3DarkTheme,
-  Provider as PaperProvider 
-} from 'react-native-paper';
+// Imports das Telas
+import BoasVindasScreen from './screens/BoasVindasScreen';
+import HomeScreen from './screens/HomeScreen';
+import ProgressoDetalhadoScreen from './screens/ProgressoDetalhadoScreen';
+import CadastroInicialScreen from './screens/CadastroInicialScreen';
+import DefinirMetasScreen from './screens/DefinirMetasScreen';
+import LoginScreen from './screens/LoginScreen';
+import PerfilScreen from './screens/PerfilScreen';
+import NutricionistaScreen from './screens/NutricionistaScreen';
+import RecuperarSenhaScreen from './screens/RecuperarSenhaScreen';
+import GerenciarInformacoesScreen from './screens/GerenciarInformacoesScreen';
 
-// Imports das Telas (mantive todos os seus)
-import BoasVindasScreen from '../src/screens/BoasVindasScreen';
-import HomeScreen from '../src/screens/HomeScreen';
-import ProgressoDetalhadoScreen from '../src/screens/ProgressoDetalhadoScreen';
-import CadastroInicialScreen from '../src/screens/CadastroInicialScreen';
-import DefinirMetasScreen from '../src/screens/DefinirMetasScreen';
-import LoginScreen from '../src/screens/LoginScreen';
-import PerfilScreen from '../src/screens/PerfilScreen';
-import NutricionistaScreen from '../src/screens/NutricionistaScreen';
-import RecuperarSenhaScreen from '../src/screens/RecuperarSenhaScreen';
-import GerenciarInformacoesScreen from '../src/screens/GerenciarInformacoesScreen';
+// --- ARQUITETURA CORRIGIDA ---
 
-// Definição de tipo das telas para o navegador
-export type RootStackParamList = {
-  Home: undefined;
-  ProgressoDetalhado: undefined;
-  CadastroInicial: undefined;
-  DefinirMetas: undefined;
+// 1. Tipagem separada para cada navegador
+export type AuthStackParamList = {
+  BoasVindas: undefined;
   Login: undefined;
   RecuperarSenha: undefined;
-  BoasVindas: undefined;
+  CadastroInicial: undefined;
+  DefinirMetas: undefined;
+};
+
+export type AppStackParamList = {
+  Home: undefined;
+  ProgressoDetalhado: undefined;
   Perfil: undefined;
   Nutricionista: undefined;
   GerenciarInformacoes: undefined;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+// 2. Criamos um Stack para cada fluxo, com a sua própria tipagem
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const AppStack = createNativeStackNavigator<AppStackParamList>();
 
-// Configuração do Tema Customizado com as fontes (mantive o seu)
+// 3. Componentes de Navegador Separados
+function AuthNavigator() {
+  return (
+    <AuthStack.Navigator 
+      initialRouteName="BoasVindas"
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}
+    >
+      <AuthStack.Screen name="BoasVindas" component={BoasVindasScreen} />
+      <AuthStack.Screen name="Login" component={LoginScreen as React.ComponentType<any>} />
+      <AuthStack.Screen name="RecuperarSenha" component={RecuperarSenhaScreen} />
+      <AuthStack.Screen name="CadastroInicial" component={CadastroInicialScreen as React.ComponentType<any>} />
+      <AuthStack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
+    </AuthStack.Navigator>
+  );
+}
+
+function AppNavigator() {
+  // Se quiser usar abas aqui (o que seria o ideal), pode trocar createNativeStackNavigator por createBottomTabNavigator
+  return (
+    <AppStack.Navigator 
+      initialRouteName="Home"
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}
+    >
+      <AppStack.Screen name="Home" component={HomeScreen} />
+      <AppStack.Screen name="ProgressoDetalhado" component={ProgressoDetalhadoScreen} />
+      <AppStack.Screen name="Perfil" component={PerfilScreen} />
+      <AppStack.Screen name="Nutricionista" component={NutricionistaScreen} />
+      <AppStack.Screen name="GerenciarInformacoes" component={GerenciarInformacoesScreen} />
+    </AppStack.Navigator>
+  );
+}
+
+// Configuração do Tema (mantida)
 const theme = {
   ...MD3DarkTheme,
   colors: {
@@ -69,95 +101,53 @@ const theme = {
   },
 };
 
-// --- Stacks de Navegação Separados ---
-
-// Telas para quem NÃO está logado
-function AuthStack() {
-  return (
-    <Stack.Navigator 
-      initialRouteName="BoasVindas"
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}
-    >
-      <Stack.Screen name="BoasVindas" component={BoasVindasScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="RecuperarSenha" component={RecuperarSenhaScreen} />
-      <Stack.Screen name="CadastroInicial" component={CadastroInicialScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Telas para quem JÁ ESTÁ logado
-function AppStack() {
-  return (
-    <Stack.Navigator 
-      initialRouteName="Home"
-      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' } }}
-    >
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
-      <Stack.Screen name="ProgressoDetalhado" component={ProgressoDetalhadoScreen} />
-      <Stack.Screen name="Perfil" component={PerfilScreen} />
-      <Stack.Screen name="Nutricionista" component={NutricionistaScreen} />
-      <Stack.Screen name="GerenciarInformacoes" component={GerenciarInformacoesScreen} />
-    </Stack.Navigator>
-  );
-}
-
-// Mantém a splash screen visível durante o carregamento
 SplashScreen.preventAutoHideAsync();
 
+// Componente Root foi renomeado para App para ser o default export
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
-    'Fustat-Regular': require('../assets/font/static/Fustat-Regular.ttf'),
-    'Fustat-Bold': require('../assets/font/static/Fustat-Bold.ttf'),
-    'Fustat-Medium': require('../assets/font/static/Fustat-Medium.ttf'),
-    'Fustat-Light': require('../assets/font/static/Fustat-Light.ttf'),
-    'Fustat-ExtraBold': require('../assets/font/static/Fustat-ExtraBold.ttf'),
-    'Fustat-ExtraLight': require('../assets/font/static/Fustat-ExtraLight.ttf'),
-    'Fustat-SemiBold': require('../assets/font/static/Fustat-SemiBold.ttf'),
+    'Fustat-Regular': require('./assets/font/static/Fustat-Regular.ttf'),
+    'Fustat-Bold': require('./assets/font/static/Fustat-Bold.ttf'),
+    'Fustat-Medium': require('./assets/font/static/Fustat-Medium.ttf'),
+    'Fustat-Light': require('./assets/font/static/Fustat-Light.ttf'),
+    'Fustat-ExtraBold': require('./assets/font/static/Fustat-ExtraBold.ttf'),
+    'Fustat-ExtraLight': require('./assets/font/static/Fustat-ExtraLight.ttf'),
+    'Fustat-SemiBold': require('./assets/font/static/Fustat-SemiBold.ttf'),
   });
 
-  // --- Lógica de Controle de Autenticação ---
   const [initializing, setInitializing] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // "Escuta" as mudanças de estado de login/logout do Firebase
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (initializing) {
         setInitializing(false);
       }
     });
-
-    // Limpa a inscrição ao desmontar o componente para evitar vazamento de memória
     return unsubscribe;
-  }, []); // O array de dependências vazio faz com que este efeito rode apenas uma vez
+  }, [initializing]);
 
   const onLayoutRootView = useCallback(async () => {
-    // Esconde a splash screen só quando as fontes e a verificação do usuário terminarem
     if ((fontsLoaded || fontError) && !initializing) {
       await SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError, initializing]);
 
-  if (fontError) {
-    console.error("Erro ao carregar fontes:", fontError);
-  }
-
-  // Enquanto as fontes ou a verificação do firebase estiverem carregando, a splash screen ficará ativa
-  if (!fontsLoaded || initializing) {
-    return null;
+  if (!fontsLoaded && !fontError && initializing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6ad400" />
+      </View>
+    );
   }
   
   return (
     <View style={styles.container} onLayout={onLayoutRootView}>
       <PaperProvider theme={theme}>
         <NavigationContainer>
-          {/* Renderiza o grupo de telas correto com base no estado do usuário */}
-          {user ? <AppStack /> : <AuthStack />}
+          {user ? <AppNavigator /> : <AuthNavigator />}
         </NavigationContainer>
-        {/* Mudei para "light" para que os ícones fiquem brancos no fundo escuro */}
         <StatusBar style="light" />
       </PaperProvider>
     </View>
@@ -168,4 +158,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000'
+  }
 });

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { Icon } from 'react-native-paper';
 
+// Interface das props (sem alterações)
 interface CustomAlertModalProps {
   isVisible: boolean;
   title: string;
@@ -11,16 +13,18 @@ interface CustomAlertModalProps {
   type?: 'success' | 'error' | 'info';
 }
 
-const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
+// CORREÇÃO: Removido o tipo de retorno explícito.
+// Deixamos o TypeScript inferir o tipo, o que resolve o conflito.
+const CustomAlertModal = ({
   isVisible,
   title,
   message,
   onClose,
   type = 'info',
-}) => {
+}: CustomAlertModalProps) => { // O tipo de retorno foi removido daqui
   const { t } = useTranslation();
 
-  const getIconAndColor = () => {
+  const getIconAndColor = (): { iconName: React.ComponentProps<typeof Ionicons>['name'], color: string } => {
     switch (type) {
       case 'success':
         return { iconName: 'checkmark-circle-outline', color: '#82CD32' };
@@ -43,15 +47,13 @@ const CustomAlertModal: React.FC<CustomAlertModalProps> = ({
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Icon name={iconName} size={60} color={color} style={styles.icon} />
-          {/* TÍTULO E MENSAGEM JÁ ESTÃO EM TEXT */}
+          <Ionicons name={iconName} size={60} color={color} style={styles.icon} />
           <Text style={styles.modalTitle}>{title}</Text>
           <Text style={styles.modalMessage}>{message}</Text>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: color }]}
             onPress={onClose}
           >
-            {/* BOTÃO JÁ ESTÁ EM TEXT E USANDO T() */}
             <Text style={styles.buttonText}>{t('cadastro.alertButtonUnderstand')}</Text>
           </TouchableOpacity>
         </View>
@@ -66,11 +68,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Fundo escuro semitransparente
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   modalView: {
     margin: 20,
-    backgroundColor: '#1a1a1a', // Fundo escuro do modal
+    backgroundColor: '#1a1a1a',
     borderRadius: 20,
     padding: 35,
     alignItems: 'center',
@@ -82,7 +84,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    width: '80%', // Largura do modal
+    width: '80%',
   },
   icon: {
     marginBottom: 15,
@@ -91,26 +93,28 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     textAlign: 'center',
     fontSize: 22,
-    fontFamily: 'Fustat-Bold', // Use sua fonte
+    fontFamily: 'Fustat-Bold',
     color: '#FFFFFF',
   },
   modalMessage: {
     marginBottom: 20,
     textAlign: 'center',
     fontSize: 16,
-    fontFamily: 'Fustat-Regular', // Use sua fonte
+    fontFamily: 'Fustat-Regular',
     color: '#ccc',
+    lineHeight: 22,
   },
   button: {
     borderRadius: 10,
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     elevation: 2,
     width: '100%',
     marginTop: 10,
   },
   buttonText: {
-    color: '#FFFFFF', // Cor do texto do botão
-    fontFamily: 'Fustat-Bold', // Use sua fonte
+    color: '#FFFFFF',
+    fontFamily: 'Fustat-Bold',
     textAlign: 'center',
     fontSize: 16,
   },

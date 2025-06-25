@@ -4,7 +4,7 @@ import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDFbivc7RnkTbiLmuxyZJ8MvOEBWnAE18",
+  apiKey: "AIzaSyDfbivc7RnkTbiLmuxyZJ8MvOEBWnAE18",
   authDomain: "dynamis-85157.firebaseapp.com",
   projectId: "dynamis-85157",
   storageBucket: "dynamis-85157.firebasestorage.app",

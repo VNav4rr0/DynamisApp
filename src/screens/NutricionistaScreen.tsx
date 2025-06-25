@@ -14,7 +14,12 @@ import { LineChart } from 'react-native-chart-kit';
 
 const { width } = Dimensions.get('window');
 
-const refeicoes = [
+type MaterialCommunityIconName =
+  | 'coffee-outline'
+  | 'silverware-fork-knife'
+  | 'food-apple';
+
+const refeicoes: { nome: string; icone: MaterialCommunityIconName }[] = [
   { nome: 'Café da Manhã', icone: 'coffee-outline' },
   { nome: 'Almoço', icone: 'silverware-fork-knife' },
   { nome: 'Café da Tarde', icone: 'coffee-outline' },
@@ -22,7 +27,7 @@ const refeicoes = [
   { nome: 'Ceia', icone: 'food-apple' },
 ];
 
-const PERIODS = ['1m', '3m', '6m', '1a', 'mais'];
+const PERIODS: PeriodKey[] = ['1m', '3m', '6m', '1a', 'mais'];
 const PERIOD_LABELS = {
   '1m': '1 mês',
   '3m': '3 meses',
@@ -31,8 +36,10 @@ const PERIOD_LABELS = {
   'mais': 'Mais',
 };
 
-const getChartData = (period: string) => {
-  const dataPoints = {
+type PeriodKey = '1m' | '3m' | '6m' | '1a' | 'mais';
+
+const getChartData = (period: PeriodKey) => {
+  const dataPoints: Record<PeriodKey, number[]> = {
     '1m': [2, 5, 3, 3, 6, 8, 9, 7, 6, 5, 4, 3],
     '3m': [3, 4, 3, 7, 6, 8, 7, 8, 9, 6, 7, 8],
     '6m': [4, 5, 6, 5, 6, 7, 6, 5, 6, 7, 5, 4],
@@ -66,9 +73,8 @@ const chartConfig = {
   fillShadowGradient: '#AEF359',
   fillShadowGradientOpacity: 0.2,
 };
-
 const NutricionistaScreen = () => {
-  const [activePeriod, setActivePeriod] = useState('1m');
+  const [activePeriod, setActivePeriod] = useState<PeriodKey>('1m');
   const [selectedDay, setSelectedDay] = useState(0);
 
   return (

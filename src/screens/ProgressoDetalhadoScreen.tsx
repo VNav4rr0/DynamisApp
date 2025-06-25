@@ -35,14 +35,14 @@ interface MetaAlimentarItem {
 }
 
 // --- Dados de Exemplo ---
-const getChartData = (period: string) => {
+const getChartData = (period: '1m' | '3m' | '6m' | '1a' | 'mais') => {
     // Numa aplicação real, esta função faria uma chamada de API
-    const dataPoints = {
+    const dataPoints: Record<'1m' | '3m' | '6m' | '1a' | 'mais', number[]> = {
         '1m': [20, 45, 28, 80, 99, 43, 50],
         '3m': [60, 75, 48, 90, 85, 99, 70, 65, 88, 92, 78, 85],
-        '6m': [/* ... dados para 6 meses ... */],
-        '1a': [/* ... dados para 1 ano ... */],
-        'mais': [/* ... todos os dados ... */],
+        '6m': [], // ... dados para 6 meses ...
+        '1a': [], // ... dados para 1 ano ...
+        'mais': [], // ... todos os dados ...
     };
     // Adicionando mais labels para o scroll funcionar
     const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -51,7 +51,7 @@ const getChartData = (period: string) => {
         labels: labels,
         datasets: [
             {
-                data: dataPoints[period] || dataPoints['1m'],
+                data: dataPoints[period] && dataPoints[period].length > 0 ? dataPoints[period] : dataPoints['1m'],
                 color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
                 strokeWidth: 3
             }
