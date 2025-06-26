@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, ImageBackground, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../App';
+
+
 import { Button } from 'react-native-paper';
 import { useTranslation, Trans } from 'react-i18next';
 import LanguageSwitcherDropdown from '../components/LanguageSwitcherDropdown';
 
-type BoasVindasScreenProps = NativeStackScreenProps<AuthStackParamList, 'BoasVindas'>;
+type BoasVindasScreenProps = NativeStackScreenProps<any, 'BoasVindas'>;
 
-const BoasVindasScreen: React.FC<BoasVindasScreenProps> = ({ navigation }) => {
+
+const BoasVindasScreen: React.FC<BoasVindasScreenProps> = ({ navigation }) =>{
   const { t } = useTranslation();
 
   return (
