@@ -1729,10 +1729,10 @@
   resolved "https://registry.npmjs.org/@react-native-firebase/firestore/-/firestore-22.2.1.tgz"
   integrity sha512-QM5r9QN45Adn/N2BkbuQNlTiTwWlHsILIrL73psOyyyAihtQpig4bAJKVhNJdUthmR0PapI/xHG9+/1D1d6Czg==
 
-"@react-native-picker/picker@^2.4.0", "@react-native-picker/picker@2.11.0":
-  version "2.11.0"
-  resolved "https://registry.npmjs.org/@react-native-picker/picker/-/picker-2.11.0.tgz"
-  integrity sha512-QuZU6gbxmOID5zZgd/H90NgBnbJ3VV6qVzp6c7/dDrmWdX8S0X5YFYgDcQFjE3dRen9wB9FWnj2VVdPU64adSg==
+"@react-native-picker/picker@^2.11.1", "@react-native-picker/picker@^2.4.0":
+  version "2.11.1"
+  resolved "https://registry.npmjs.org/@react-native-picker/picker/-/picker-2.11.1.tgz"
+  integrity sha512-ThklnkK4fV3yynnIIRBkxxjxR4IFbdMNJVF6tlLdOJ/zEFUEFUEdXY0KmH0iYzMwY8W4/InWsLiA7AkpAbnexA==
 
 "@react-native/assets-registry@0.79.4":
   version "0.79.4"
@@ -3056,10 +3056,10 @@ expo-system-ui@~5.0.9:
     "@react-native/normalize-colors" "0.79.4"
     debug "^4.3.2"
 
-expo@*, expo@^53.0.12, expo@>=47.0.0:
-  version "53.0.12"
-  resolved "https://registry.npmjs.org/expo/-/expo-53.0.12.tgz"
-  integrity sha512-dtmED749hkxDWCcvtD++tb8bAm3Twv8qnUOXzVyXA5owNG0mwDIz0HveJTpWK1UzkY4HcTVRezDf0tflZJ+JXQ==
+expo@*, expo@^53.0.13, expo@>=47.0.0:
+  version "53.0.13"
+  resolved "https://registry.npmjs.org/expo/-/expo-53.0.13.tgz"
+  integrity sha512-QDdEEbFErUmm2IHR/UPKKIRLN3z5MmN2QLx0aPlOEGOx295buSUE42u6f7TppkgJn0BUX3f7wFaHRo86+G+Trg==
   dependencies:
     "@babel/runtime" "^7.20.0"
     "@expo/cli" "0.24.15"
@@ -4644,6 +4644,11 @@ react-native-picker-select@^9.1.3:
   dependencies:
     lodash.isequal "^4.5.0"
     lodash.isobject "^3.0.2"
+
+react-native-picker@^4.3.7:
+  version "4.3.7"
+  resolved "https://registry.npmjs.org/react-native-picker/-/react-native-picker-4.3.7.tgz"
+  integrity sha512-bqY0FOsgNe/svnlV7CTvDKjqca5iZr0E0h4gYO8LDh9alxGK7P6bTvqSx6VwDR144moHAG7dsKGrSH2r8bTx2Q==
 
 react-native-reanimated@~3.17.4:
   version "3.17.5"

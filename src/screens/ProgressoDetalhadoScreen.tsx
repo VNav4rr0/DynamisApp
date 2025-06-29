@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -18,13 +18,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width } = Dimensions.get('window');
 
 // --- Tipagem ---
-type RootTabParamList = {
-    Home: undefined;
-    ProgressoDetalhado: undefined;
-    Perfil: undefined;
+// Ajuste a tipagem para MainTabParamList (igual à definida no App.tsx)
+type MainTabParamList = {
+    HomeTab: undefined;
+    ProgressoDetalhadoTab: undefined;
+    PerfilTab: undefined;
 };
 
-type ProgressoDetalhadoProps = BottomTabScreenProps<RootTabParamList, 'ProgressoDetalhado'>;
+// Ajuste ProgressoDetalhadoProps para usar MainTabParamList e a rota correta
+type ProgressoDetalhadoProps = BottomTabScreenProps<MainTabParamList, 'ProgressoDetalhadoTab'>;
 
 interface MetaAlimentarItem {
     label: string;
@@ -36,19 +38,17 @@ interface MetaAlimentarItem {
 
 // --- Dados de Exemplo ---
 const getChartData = (period: '1m' | '3m' | '6m' | '1a' | 'mais') => {
-    // Numa aplicação real, esta função faria uma chamada de API
     const dataPoints: Record<'1m' | '3m' | '6m' | '1a' | 'mais', number[]> = {
         '1m': [20, 45, 28, 80, 99, 43, 50],
         '3m': [60, 75, 48, 90, 85, 99, 70, 65, 88, 92, 78, 85],
-        '6m': [], // ... dados para 6 meses ...
-        '1a': [], // ... dados para 1 ano ...
-        'mais': [], // ... todos os dados ...
+        '6m': [55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110], // Exemplo de dados para 6 meses
+        '1a': [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95], // Exemplo de dados para 1 ano
+        'mais': [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85], // Exemplo de dados para 'mais'
     };
-    // Adicionando mais labels para o scroll funcionar
     const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     
     return {
-        labels: labels,
+        labels: labels.slice(0, dataPoints[period]?.length || labels.length), // Ajusta labels para o tamanho dos dados
         datasets: [
             {
                 data: dataPoints[period] && dataPoints[period].length > 0 ? dataPoints[period] : dataPoints['1m'],
@@ -60,8 +60,8 @@ const getChartData = (period: '1m' | '3m' | '6m' | '1a' | 'mais') => {
 };
 
 const CHART_CONFIG = {
-    backgroundGradientFrom: '#1C1C1E',
-    backgroundGradientTo: '#1C1C1E',
+    backgroundGradientFrom: '#181917',
+    backgroundGradientTo: '#181917',
     decimalPlaces: 0,
     color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(255, 255, 255, 0.5)`,
@@ -78,11 +78,10 @@ const CHART_CONFIG = {
     fillShadowGradientOpacity: 0.2,
 };
 
-// ALTERAÇÃO: Cores das barras de progresso ajustadas para tons de verde.
 const META_ALIMENTAR_DATA: MetaAlimentarItem[] = [
-    { label: 'progress.proteins', value: 120, unit: 'g', percentage: 75, color: '#AEF359' }, // Verde principal
-    { label: 'progress.carbohydrates', value: 200, unit: 'g', percentage: 90, color: '#8BC34A' }, // Verde secundário
-    { label: 'progress.healthy_fats', value: 50, unit: 'g', percentage: 60, color: '#689F38' }, // Verde terciário
+    { label: 'progress.proteins', value: 120, unit: 'g', percentage: 75, color: '#AEF359' },
+    { label: 'progress.carbohydrates', value: 200, unit: 'g', percentage: 90, color: '#8BC34A' },
+    { label: 'progress.healthy_fats', value: 50, unit: 'g', percentage: 60, color: '#689F38' },
 ];
 
 const PERIODS: Array<'1m' | '3m' | '6m' | '1a' | 'mais'> = ['1m', '3m', '6m', '1a', 'mais'];
@@ -98,35 +97,7 @@ const periodKeyMap = {
 const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const [activePeriod, setActivePeriod] = useState<'1m' | '3m' | '6m' | '1a' | 'mais'>('1m');
-    const [activeTab, setActiveTab] = useState<string>('insights');
     
-    const navButtonWidth = (width - 40) / 3;
-    const slideAnim = useRef(new Animated.Value(navButtonWidth)).current;
-
-    const handleTabPress = (tab: 'home' | 'insights' | 'person') => {
-        setActiveTab(tab);
-        if (tab === 'home') {
-            navigation.navigate('Home');
-        } else if (tab === 'person') {
-            navigation.navigate('Perfil');
-        }
-    };
-
-    useEffect(() => {
-        let toValue = navButtonWidth;
-        if (activeTab === 'home') {
-            toValue = 0;
-        } else if (activeTab === 'person') {
-            toValue = navButtonWidth * 2;
-        }
-        
-        Animated.spring(slideAnim, {
-            toValue,
-            useNativeDriver: false,
-            bounciness: 10,
-        }).start();
-    }, [activeTab]);
-
 
     const translatedMetaAlimentar = useMemo(() => META_ALIMENTAR_DATA.map(item => ({ ...item, label: t(item.label) })), [t]);
     const chartData = useMemo(() => getChartData(activePeriod), [activePeriod]);
@@ -134,7 +105,7 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
     return (
         <View style={styles.rootContainer}>
             <StatusBar barStyle="light-content" />
-            <LinearGradient colors={['#111', '#000']} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={['#181917', '#020500']} style={StyleSheet.absoluteFill} />
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
@@ -170,13 +141,12 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                             bezier
                             style={styles.chart}
                             fromZero
-                            withVerticalLabels // Mostra os valores no eixo Y
+                            withVerticalLabels
                         />
                     </ScrollView>
                     <View style={styles.divider} />
                     <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
                     {translatedMetaAlimentar.map((item, index) => (
-                        // LAYOUT DAS BARRAS DE PROGRESSO CORRIGIDO
                         <View key={index} style={styles.metaItem}>
                             <View style={styles.metaHeader}>
                                 <View style={styles.metaLabelContainer}>
@@ -193,47 +163,24 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                 </View>
             </ScrollView>
 
-            {/* Bottom Nav */}
-            <View style={styles.bottomNav}>
-                <Animated.View style={[styles.activeIndicator, { left: slideAnim }]} />
-                <View style={styles.navButtonContainer}>
-                    <TouchableOpacity style={styles.navButton} onPress={() => handleTabPress('home')} accessibilityLabel={t('navbar.home')}>
-                        <View style={styles.navButtonContent}>
-                            <MaterialIcons name="home" size={26} color={activeTab === 'home' ? '#000' : '#FFF'} />
-                            {activeTab === 'home' && <Text style={styles.navText}>{t('navbar.home')}</Text>}
-                        </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton} onPress={() => handleTabPress('insights')} accessibilityLabel={t('navbar.goals')}>
-                        <View style={styles.navButtonContent}>
-                            <MaterialIcons name="insights" size={26} color={activeTab === 'insights' ? '#000' : '#FFF'} />
-                            {activeTab === 'insights' && <Text style={styles.navText}>{t('navbar.goals')}</Text>}
-                        </View>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.navButton} onPress={() => handleTabPress('person')} accessibilityLabel={t('navbar.profile')}>
-                        <View style={styles.navButtonContent}>
-                            <MaterialIcons name="person" size={26} color={activeTab === 'person' ? '#000' : '#FFF'} />
-                            {activeTab === 'person' && <Text style={styles.navText}>{t('navbar.profile')}</Text>}
-                        </View>
-                    </TouchableOpacity>
-                </View>
-            </View>
+            
         </View>
     );
 };
 
-// --- Estilos Refatorados ---
+// --- Estilos Refatorados (REMOVIDO ESTILOS DA NAVBAR) ---
 const styles = StyleSheet.create({
     rootContainer: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: '#020500',
     },
     scrollContent: {
         paddingTop: 60,
-        paddingBottom: 120,
+        paddingBottom: 120, // Manter o paddingBottom para a navbar vinda do App.tsx
+        paddingHorizontal: 20, // Adicionei padding horizontal para todo o conteúdo aqui
     },
     header: {
         marginBottom: 24,
-        paddingHorizontal: 20,
     },
     headerTitle: {
         fontSize: 34,
@@ -249,10 +196,9 @@ const styles = StyleSheet.create({
     periodFilterContainer: {
         flexDirection: 'row',
         marginBottom: 30,
-        backgroundColor: '#1C1C1E',
+        backgroundColor: '#181917',
         borderRadius: 50,
         padding: 4,
-        marginHorizontal: 20,
     },
     periodButton: {
         flex: 1,
@@ -273,15 +219,14 @@ const styles = StyleSheet.create({
         color: '#000',
     },
     progressCard: {
-        backgroundColor: '#1C1C1E',
+        backgroundColor: '#181917',
         borderRadius: 24,
-        marginHorizontal: 20,
         paddingTop: 16,
         paddingBottom: 8,
-        overflow: 'hidden', // Importante para o scroll do gráfico
+        overflow: 'hidden',
     },
     chart: {
-        paddingRight: 20, // Dá um respiro no final do gráfico
+        paddingRight: 20,
     },
     divider: {
         height: 1,
@@ -296,7 +241,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         paddingHorizontal: 20,
     },
-    // ESTILOS DAS BARRAS DE PROGRESSO CORRIGIDOS
     metaItem: {
         marginBottom: 24,
         paddingHorizontal: 20,
@@ -337,45 +281,8 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 4,
     },
-    // Estilos da Navbar
-    bottomNav: {
-        position: 'absolute',
-        bottom: 30,
-        left: 20,
-        right: 20,
-        height: 65,
-        backgroundColor: '#1C1C1E',
-        borderRadius: 32.5,
-        flexDirection: 'row',
-    },
-    activeIndicator: {
-        position: 'absolute',
-        top: 7.5,
-        height: 50,
-        width: ((width - 40) / 3) - 10,
-        marginHorizontal: 5,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 25,
-    },
-    navButtonContainer: {
-        flex: 1,
-        flexDirection: 'row',
-    },
-    navButton: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    navButtonContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    navText: {
-        color: '#000',
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
+    // REMOVIDO TODOS OS ESTILOS DA NAVBAR DAQUI:
+    // bottomNav, activeIndicator, navButtonContainer, navButton, navButtonContent, navText
 });
 
 export default ProgressoDetalhadoScreen;

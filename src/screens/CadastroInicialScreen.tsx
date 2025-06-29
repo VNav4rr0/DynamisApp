@@ -24,6 +24,7 @@ import SuccessModal from '../components/SuccessModal';
 import TermsModal from '../components/TermsModal';
 import { useTranslation } from 'react-i18next';
 import { auth, db } from '../../firebaseConfig/firebase'; // Ajuste este caminho se necessário
+import { doc, setDoc } from 'firebase/firestore'; // NOVO: Importar setDoc para escrita de dados
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -195,18 +196,21 @@ const CadastroInicialScreen: React.FC<CadastroInicialScreenProps> = ({ navigatio
 
   const handleRegister = async () => {
     setIsLoading(true);
+    console.log("Iniciando registro para email:", email); // Log 1
 
     try {
       const userCredential = await auth.createUserWithEmailAndPassword(email, senha);
       const user = userCredential.user;
+
+      console.log("Usuário criado no Firebase Auth:", user?.uid); // Log 2
 
       if (user) {
         let baseUserData = {
             nome: nome.trim(),
             email: email.trim().toLowerCase(),
             tipoUtilizador: 'paciente',
-            codigoPartilha: generateShareCode(),
-            nutricionistaId: null,
+            codigoPartilha: generateShareCode(), // Garanta que generateShareCode() funciona
+            nutricionistaId: null, // Certifique-se que o campo nutricionistaId existe
             dataRegisto: new Date().toISOString(),
             dadosPessoais: {
                 idade: Number(idade),
@@ -224,16 +228,39 @@ const CadastroInicialScreen: React.FC<CadastroInicialScreenProps> = ({ navigatio
         const nutritionalCalculations = calculateNutritionalGoals(baseUserData);
         const finalUserData = { ...baseUserData, ...nutritionalCalculations };
 
-        await db.collection("usuarios").doc(user.uid).set(finalUserData);
+        console.log("Dados finais a serem salvos no Firestore:", finalUserData); // Log 3
 
-        setIsLoading(false);
-        setIsSuccessModalVisible(true);
+        try {
+            // Tenta salvar no Firestore usando setDoc (importado do 'firebase/firestore')
+            // Use setDoc(doc(db, "colecao", "idDoDocumento"), dados)
+            await setDoc(doc(db, "usuarios", user.uid), finalUserData);
+            console.log("Dados do usuário salvos com sucesso no Firestore para UID:", user.uid); // Log 4
+
+            setIsLoading(false);
+            setIsSuccessModalVisible(true);
+        } catch (firestoreError: any) {
+            // Erro específico ao salvar no Firestore
+            setIsLoading(false);
+            console.error("Erro ao salvar dados do usuário no Firestore:", firestoreError); // Log 5 (Erro Firestore)
+            showAlert('Erro', 'Ocorreu um erro ao salvar seus dados. Tente novamente.'); // Mensagem mais específica
+        }
+      } else {
+          // Caso user seja null (improvável após createUserWithEmailAndPassword bem-sucedido)
+          setIsLoading(false);
+          console.error("Erro: Usuário nulo após criação de credenciais."); // Log 6
+          showAlert('Erro', 'Não foi possível criar sua conta. Tente novamente.');
       }
-    } catch (error: any) {
+
+    } catch (authError: any) {
+      // Erro específico de autenticação (e-mail já em uso, senha fraca, etc.)
       setIsLoading(false);
-      console.error("Erro no registo: ", error);
-      if (error.code === 'auth/email-already-in-use') {
+      console.error("Erro no registro (Autenticação Firebase): ", authError); // Log 7 (Erro Auth)
+      if (authError.code === 'auth/email-already-in-use') {
         showAlert('Erro', t('cadastro.emailInUse'));
+      } else if (authError.code === 'auth/invalid-email') {
+        showAlert('Erro', 'O formato do e-mail é inválido.');
+      } else if (authError.code === 'auth/weak-password') {
+        showAlert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
       } else {
         showAlert('Erro', t('cadastro.registrationError'));
       }
