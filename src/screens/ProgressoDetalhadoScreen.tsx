@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -8,6 +8,7 @@ import {
     ScrollView,
     Animated,
     StatusBar,
+    ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
@@ -15,40 +16,47 @@ import { useTranslation } from 'react-i18next';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// --- Firebase Imports ---
+import { auth, db } from '../../firebaseConfig/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
 const { width } = Dimensions.get('window');
 
 // --- Tipagem ---
-// Ajuste a tipagem para MainTabParamList (igual à definida no App.tsx)
-type MainTabParamList = {
+export type MainTabParamList = {
     HomeTab: undefined;
     ProgressoDetalhadoTab: undefined;
     PerfilTab: undefined;
 };
 
-// Ajuste ProgressoDetalhadoProps para usar MainTabParamList e a rota correta
 type ProgressoDetalhadoProps = BottomTabScreenProps<MainTabParamList, 'ProgressoDetalhadoTab'>;
 
-interface MetaAlimentarItem {
-    label: string;
-    value: number;
-    unit: string;
-    percentage: number;
-    color: string;
+interface MacroData {
+    proteina: number;
+    carboidratos: number;
+    gordura: number;
 }
 
-// --- Dados de Exemplo ---
+interface UserNutritionalGoals {
+    tmb: number;
+    get: number;
+    metaCalorias: number;
+    macros: MacroData;
+    dataCalculo: string;
+}
+
 const getChartData = (period: '1m' | '3m' | '6m' | '1a' | 'mais') => {
     const dataPoints: Record<'1m' | '3m' | '6m' | '1a' | 'mais', number[]> = {
         '1m': [20, 45, 28, 80, 99, 43, 50],
         '3m': [60, 75, 48, 90, 85, 99, 70, 65, 88, 92, 78, 85],
-        '6m': [55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110], // Exemplo de dados para 6 meses
-        '1a': [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95], // Exemplo de dados para 1 ano
-        'mais': [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85], // Exemplo de dados para 'mais'
+        '6m': [55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110],
+        '1a': [40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95],
+        'mais': [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
     };
     const labels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     
     return {
-        labels: labels.slice(0, dataPoints[period]?.length || labels.length), // Ajusta labels para o tamanho dos dados
+        labels: labels.slice(0, dataPoints[period]?.length || labels.length),
         datasets: [
             {
                 data: dataPoints[period] && dataPoints[period].length > 0 ? dataPoints[period] : dataPoints['1m'],
@@ -78,13 +86,7 @@ const CHART_CONFIG = {
     fillShadowGradientOpacity: 0.2,
 };
 
-const META_ALIMENTAR_DATA: MetaAlimentarItem[] = [
-    { label: 'progress.proteins', value: 120, unit: 'g', percentage: 75, color: '#AEF359' },
-    { label: 'progress.carbohydrates', value: 200, unit: 'g', percentage: 90, color: '#8BC34A' },
-    { label: 'progress.healthy_fats', value: 50, unit: 'g', percentage: 60, color: '#689F38' },
-];
-
-const PERIODS: Array<'1m' | '3m' | '6m' | '1a' | 'mais'> = ['1m', '3m', '6m', '1a', 'mais'];
+const PERIODS: Array<'1m' | '3m' | '6m' | '1a' | 'mais'> = ['1m', '3m', '6m', '1a', 'mais']; // Corrigi o tipo '3m | 6m...'
 const periodKeyMap = {
     '1m': 'period_1month',
     '3m': 'period_3months',
@@ -97,9 +99,93 @@ const periodKeyMap = {
 const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigation }) => {
     const { t } = useTranslation();
     const [activePeriod, setActivePeriod] = useState<'1m' | '3m' | '6m' | '1a' | 'mais'>('1m');
-    
 
-    const translatedMetaAlimentar = useMemo(() => META_ALIMENTAR_DATA.map(item => ({ ...item, label: t(item.label) })), [t]);
+    const [nutritionalGoals, setNutritionalGoals] = useState<UserNutritionalGoals | null>(null);
+    const [isLoadingMacros, setIsLoadingMacros] = useState(true);
+    const [errorLoadingMacros, setErrorLoadingMacros] = useState<string | null>(null);
+
+    const fetchNutritionalGoals = useCallback(async () => {
+        setIsLoadingMacros(true);
+        setErrorLoadingMacros(null);
+        const user = auth.currentUser;
+
+        console.log("ProgressoDetalhado: Iniciando busca de macros.");
+
+        if (!user) {
+            console.error("ProgressoDetalhado: Usuário não logado para buscar macros. Redirecionando ou exibindo erro.");
+            setErrorLoadingMacros("Você precisa estar logado para ver seus dados nutricionais.");
+            setIsLoadingMacros(false);
+            // navigation.replace('BoasVindasScreen'); // Comentar ou ativar se quiser redirecionar aqui
+            return;
+        }
+
+        console.log("ProgressoDetalhado: UID do usuário logado:", user.uid);
+
+        try {
+            const userDocRef = doc(db, "usuarios", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                console.log("ProgressoDetalhado: Dados completos do usuário do Firestore:", userData);
+
+                if (userData.calculosNutricionais) {
+                    setNutritionalGoals(userData.calculosNutricionais as UserNutritionalGoals);
+                    console.log("ProgressoDetalhado: 'calculosNutricionais' encontrado e carregado:", userData.calculosNutricionais);
+                    if (!userData.calculosNutricionais.macros || typeof userData.calculosNutricionais.metaCalorias === 'undefined') {
+                        console.warn("ProgressoDetalhado: 'macros' ou 'metaCalorias' ausente em calculosNutricionais.");
+                        setErrorLoadingMacros("Dados nutricionais incompletos. Por favor, recalcule suas metas.");
+                    }
+                } else {
+                    console.log("ProgressoDetalhado: 'calculosNutricionais' não encontrado no documento do usuário.");
+                    setErrorLoadingMacros("Dados nutricionais não calculados. Por favor, complete seu cadastro.");
+                }
+            } else {
+                console.log("ProgressoDetalhado: Documento do usuário não encontrado no Firestore para UID:", user.uid);
+                setErrorLoadingMacros("Seu perfil não foi encontrado. Faça login novamente.");
+            }
+        } catch (error: any) {
+            console.error("ProgressoDetalhado: ERRO FATAL ao buscar dados nutricionais do Firestore:", error);
+            if (error.code === 'permission-denied') {
+                setErrorLoadingMacros("Erro de permissão. Verifique suas regras do Firebase.");
+            } else {
+                setErrorLoadingMacros("Erro ao carregar dados nutricionais. Verifique sua conexão e tente novamente.");
+            }
+        } finally {
+            setIsLoadingMacros(false);
+            console.log("ProgressoDetalhado: Finalizado carregamento de macros. isLoadingMacros:", false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchNutritionalGoals();
+    }, [fetchNutritionalGoals]);
+
+    const translatedMetaAlimentar = useMemo(() => {
+        if (!nutritionalGoals || !nutritionalGoals.macros || typeof nutritionalGoals.metaCalorias === 'undefined') {
+            console.log("ProgressoDetalhado: Não há dados nutricionais ou estão incompletos para exibir as barras.");
+            return [];
+        }
+
+        const { proteina, carboidratos, gordura } = nutritionalGoals.macros;
+        const metaCalorias = nutritionalGoals.metaCalorias;
+
+        const safeMetaCalorias = metaCalorias > 0 ? metaCalorias : 1;
+
+        const calculatePercentage = (grams: number, caloriesPerGram: number) => {
+            const caloriesFromMacro = grams * caloriesPerGram;
+            return Math.min(100, Math.round((caloriesFromMacro / safeMetaCalorias) * 100));
+        };
+
+        const macrosData = [
+            { label: t('progress.proteins'), value: proteina, unit: 'g', percentage: calculatePercentage(proteina, 4), color: '#AEF359' },
+            { label: t('progress.carbohydrates'), value: carboidratos, unit: 'g', percentage: calculatePercentage(carboidratos, 4), color: '#8BC34A' },
+            { label: 'progress.healthy_fats', value: gordura, unit: 'g', percentage: calculatePercentage(gordura, 9), color: '#689F38' },
+        ];
+        console.log("ProgressoDetalhado: Macros processados para exibição:", macrosData);
+        return macrosData;
+    }, [nutritionalGoals, t]);
+
     const chartData = useMemo(() => getChartData(activePeriod), [activePeriod]);
 
     return (
@@ -131,44 +217,63 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
 
                 {/* Card Unificado de Progresso */}
                 <View style={styles.progressCard}>
-                    {/* GRÁFICO COM SCROLL HORIZONTAL */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <LineChart
-                            data={chartData}
-                            width={width * 1.5} // Gráfico mais largo que a tela
-                            height={230}
-                            chartConfig={CHART_CONFIG}
-                            bezier
-                            style={styles.chart}
-                            fromZero
-                            withVerticalLabels
-                        />
-                    </ScrollView>
-                    <View style={styles.divider} />
-                    <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
-                    {translatedMetaAlimentar.map((item, index) => (
-                        <View key={index} style={styles.metaItem}>
-                            <View style={styles.metaHeader}>
-                                <View style={styles.metaLabelContainer}>
-                                    <View style={[styles.metaColorDot, { backgroundColor: item.color }]} />
-                                    <Text style={styles.metaText}>{item.label}</Text>
-                                </View>
-                                <Text style={styles.metaValueText}>{item.value}{item.unit}</Text>
-                            </View>
-                            <View style={styles.progressBarBackground}>
-                                <View style={[styles.progressBarFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
-                            </View>
+                    {isLoadingMacros ? (
+                        <ActivityIndicator size="large" color="#AEF359" style={{ marginVertical: 50 }} />
+                    ) : errorLoadingMacros ? (
+                        <View style={styles.errorContainer}>
+                            <MaterialIcons name="error-outline" size={40} color="#C62828" />
+                            <Text style={styles.errorText}>{errorLoadingMacros}</Text>
+                            <TouchableOpacity onPress={fetchNutritionalGoals} style={styles.retryButton}>
+                                <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+                            </TouchableOpacity>
                         </View>
-                    ))}
+                    ) : (
+                        <>
+                            {/* GRÁFICO COM SCROLL HORIZONTAL */}
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartScrollView}> {/* Adicionado estilo aqui */}
+                                <LineChart
+                                    data={chartData}
+                                    width={width * 1.5}
+                                    height={230}
+                                    chartConfig={CHART_CONFIG}
+                                    bezier
+                                    style={styles.chart}
+                                    fromZero
+                                    withVerticalLabels
+                                />
+                            </ScrollView>
+                            <View style={styles.divider} />
+                            <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
+                            {translatedMetaAlimentar.length > 0 ? (
+                                translatedMetaAlimentar.map((item, index) => (
+                                    <View key={index} style={styles.metaItem}>
+                                        <View style={styles.metaHeader}>
+                                            <View style={styles.metaLabelContainer}>
+                                                <View style={[styles.metaColorDot, { backgroundColor: item.color }]} />
+                                                <Text style={styles.metaText}>{item.label}</Text>
+                                            </View>
+                                            <Text style={styles.metaValueText}>{item.value}{item.unit}</Text>
+                                        </View>
+                                        <View style={styles.progressBarBackground}>
+                                            <View style={[styles.progressBarFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
+                                        </View>
+                                    </View>
+                                ))
+                            ) : (
+                                <View style={styles.noDataContainer}>
+                                    <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                                    <Text style={styles.noDataText}>Nenhuma meta nutricional encontrada.</Text>
+                                    <Text style={styles.noDataText}>Complete seu cadastro para ver este progresso!</Text>
+                                </View>
+                            )}
+                        </>
+                    )}
                 </View>
             </ScrollView>
-
-            
         </View>
     );
 };
 
-// --- Estilos Refatorados (REMOVIDO ESTILOS DA NAVBAR) ---
 const styles = StyleSheet.create({
     rootContainer: {
         flex: 1,
@@ -176,8 +281,8 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingTop: 60,
-        paddingBottom: 120, // Manter o paddingBottom para a navbar vinda do App.tsx
-        paddingHorizontal: 20, // Adicionei padding horizontal para todo o conteúdo aqui
+        paddingBottom: 120,
+        paddingHorizontal: 20,
     },
     header: {
         marginBottom: 24,
@@ -225,8 +330,12 @@ const styles = StyleSheet.create({
         paddingBottom: 8,
         overflow: 'hidden',
     },
+    chartScrollView: { // NOVO ESTILO: Para o ScrollView do gráfico
+        paddingLeft: 20, // Ajusta o padding do início do gráfico
+    },
     chart: {
-        paddingRight: 20,
+        paddingRight: 20, // Continua dando espaço no final
+        // O paddingLeft do LineChart não funcionou bem com o scroll, então o ScrollView pai cuida.
     },
     divider: {
         height: 1,
@@ -281,8 +390,37 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 4,
     },
-    // REMOVIDO TODOS OS ESTILOS DA NAVBAR DAQUI:
-    // bottomNav, activeIndicator, navButtonContainer, navButton, navButtonContent, navText
+    errorContainer: {
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        color: '#C62828',
+        marginTop: 10,
+        textAlign: 'center',
+        fontSize: 16,
+    },
+    retryButton: {
+        backgroundColor: '#AEF359',
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        marginTop: 15,
+    },
+    retryButtonText: {
+        color: '#000',
+        fontWeight: 'bold',
+    },
+    noDataContainer: {
+        alignItems: 'center',
+        padding: 20,
+    },
+    noDataText: {
+        color: '#9E9E9E',
+        marginTop: 10,
+        textAlign: 'center',
+        fontSize: 16,
+    },
 });
 
 export default ProgressoDetalhadoScreen;
