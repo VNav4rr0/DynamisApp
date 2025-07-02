@@ -14,19 +14,24 @@ import {
     ImageBackground,
     TouchableWithoutFeedback,
     ActivityIndicator,
-    Alert, // Adicionar Alert para feedback ao usuário
+    Alert, // Removendo o import de Alert, pois vamos usar CustomAlertModal
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { format, isToday, isYesterday, parseISO } from 'date-fns'; // Para lidar com datas
-import { ptBR } from 'date-fns/locale'; // Para localização (opcional)
+import { format, isToday, isYesterday, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // --- Firebase Imports ---
-import { auth, db } from '../../firebaseConfig/firebase'; // Verifique o caminho
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore'; // Importar doc, getDoc, setDoc, updateDoc
-import { useIsFocused } from '@react-navigation/native'; // Para recarregar dados ao focar na tela
+import { auth, db } from '../../firebaseConfig/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { useIsFocused } from '@react-navigation/native';
+
+
+// Certifique-se de que o caminho abaixo está correto e aponta para o seu componente personalizado
+import CustomAlertModal from '../components/CustomAlertModal'; // Importando o CustomAlertModal
+// Ajuste o caminho acima conforme a localização real do seu CustomAlertModal.tsx
 
 const { width } = Dimensions.get('window');
 
@@ -39,19 +44,17 @@ export type MainTabParamList = {
 
 type HomeScreenProps = BottomTabScreenProps<MainTabParamList, 'HomeTab'>;
 
-// Nova interface para os dados de sequência no Firestore
 interface StreakData {
     currentStreak: number;
-    lastCompletionDate: string; // ISO string 'YYYY-MM-DD'
-    completedDaysOfWeek: string[]; // ['Seg', 'Ter', ...] da semana atual
+    lastCompletionDate: string;
+    completedDaysOfWeek: string[];
 }
 
-// Nova interface para os dados diários
 interface DailyLog {
     calories: number;
     weight: number;
     water: number;
-    timestamp: string; // Data e hora da atualização
+    timestamp: string;
 }
 
 interface DayButtonProps {
@@ -87,7 +90,7 @@ const DayButton: React.FC<DayButtonProps> = ({ day, label, isActive, isCompleted
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     // Estados
-    const [currentDayIndex, setCurrentDayIndex] = useState<number>(new Date().getDay()); // 0=Dom, 1=Seg
+    const [currentDayIndex, setCurrentDayIndex] = useState<number>(new Date().getDay());
     const [currentStreak, setCurrentStreak] = useState<number>(0);
     const [completedDays, setCompletedDays] = useState<string[]>([]);
     const [isModalVisible, setModalVisible] = useState(false);
@@ -99,27 +102,32 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const [playFireAnimation, setPlayFireAnimation] = useState(false);
     const fireAnimation = useRef(new Animated.Value(1)).current;
 
-    // Novo estado para o carregamento da sequência
     const [isLoadingStreak, setIsLoadingStreak] = useState(true);
     const [errorLoadingStreak, setErrorLoadingStreak] = useState<string | null>(null);
 
-    const isFocused = useIsFocused(); // Hook para verificar se a tela está focada
+    // --- NOVOS ESTADOS PARA CUSTOM ALERT MODAL ---
+    const [isAlertVisible, setIsAlertVisible] = useState(false);
+    const [alertTitle, setAlertTitle] = useState('');
+    const [alertMessage, setAlertMessage] = useState('');
+
+    const isFocused = useIsFocused();
 
     const motivationalPhrases = [
         "Continue firme, cada dia conta!",
         "Você está mais perto do seu objetivo!",
         "A disciplina te leva longe!",
     ];
-    
-    const days = [
-        { day: 'Dom', label: 'Dom' }, // Ajuste para Domingo como 0
-        { day: 'Seg', label: 'Seg' },
-        { day: 'Ter', label: 'Ter' },
-        { day: 'Qua', label: 'Qua' },
-        { day: 'Qui', label: 'Qui' },
-        { day: 'Sex', label: 'Sex' },
-        { day: 'Sab', label: 'Sab' },
-    ];
+
+    // --- FUNÇÕES DO CUSTOM ALERT MODAL ---
+    const showAlert = useCallback((title: string, message: string) => {
+        setAlertTitle(title);
+        setAlertMessage(message);
+        setIsAlertVisible(true);
+    }, []);
+
+    const hideAlert = useCallback(() => {
+        setIsAlertVisible(false);
+    }, []);
 
     // --- FUNÇÕES DE INTERAÇÃO COM O BANCO DE DADOS (STREAK E DAILY LOGS) ---
     const loadStreakData = useCallback(async () => {
@@ -130,8 +138,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         if (!user) {
             console.log("Home: Usuário não logado, não carregando sequência.");
             setIsLoadingStreak(false);
-            // setCompletedDays([]); // Limpar dias se não logado
-            // setCurrentStreak(0); // Resetar sequência
+            setCompletedDays([]);
+            setCurrentStreak(0);
+            setCurrentDayIndex(new Date().getDay());
             return;
         }
 
@@ -142,33 +151,48 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 const streakData = userData.streakData as StreakData;
+                const today = new Date();
+                const currentDayName = days[today.getDay()].day;
 
                 console.log("Home: Dados de sequência puxados do Firestore:", streakData);
 
                 if (streakData) {
-                    let { currentStreak, lastCompletionDate, completedDaysOfWeek } = streakData;
+                    let { currentStreak: storedStreak, lastCompletionDate, completedDaysOfWeek } = streakData;
                     const lastDate = parseISO(lastCompletionDate);
-                    const today = new Date();
+
+                    let newStreak = storedStreak;
+                    let newCompletedDaysOfWeek = completedDaysOfWeek || [];
+                    
+                    const startOfLastWeek = startOfWeek(lastDate, { locale: ptBR, weekStartsOn: 0 });
+                    const startOfThisWeek = startOfWeek(today, { locale: ptBR, weekStartsOn: 0 });
+
+                    if (!isSameDay(startOfLastWeek, startOfThisWeek)) {
+                        console.log("Home: Nova semana detectada. Resetando dias da semana completados.");
+                        newCompletedDaysOfWeek = [];
+                    }
 
                     if (isToday(lastDate)) {
-                        // Mesma data, sequência e dias completados permanecem
-                        console.log("Home: Atividade já registrada hoje. Sequência atual:", currentStreak);
+                        console.log("Home: Atividade já registrada hoje. Sequência atual:", newStreak);
                     } else if (isYesterday(lastDate)) {
-                        // Ontem foi o último dia, sequência continua
-                        console.log("Home: Última atividade foi ontem. Sequência continua:", currentStreak);
+                        console.log("Home: Última atividade foi ontem. Sequência continua:", newStreak);
+                        newStreak += 1;
                     } else {
-                        // Perdeu a sequência, resetar
                         console.log("Home: Sequência perdida. Resetando sequência.");
-                        currentStreak = 0; // Se a sequência já está em zero, manter em zero
-                        // Opcional: Resetar completedDaysOfWeek apenas se a semana mudou drasticamente
+                        newStreak = 0;
+                        newCompletedDaysOfWeek = [];
                     }
-                    
-                    // Sempre atualizar o currentDayIndex para o dia de hoje
-                    setCurrentDayIndex(today.getDay()); 
-                    setCompletedDays(completedDaysOfWeek || []); // Garante que seja um array
-                    setCurrentStreak(currentStreak);
-                    setPlayFireAnimation(true); // Anima o fogo na carga (opcional)
 
+                    if (isToday(lastDate) && !newCompletedDaysOfWeek.includes(currentDayName)) {
+                         newCompletedDaysOfWeek.push(currentDayName);
+                    } else if (!isToday(lastDate) && newCompletedDaysOfWeek.includes(currentDayName)) {
+                        newCompletedDaysOfWeek = newCompletedDaysOfWeek.filter(day => day !== currentDayName);
+                    }
+
+                    setCurrentStreak(newStreak);
+                    setCompletedDays(newCompletedDaysOfWeek);
+                    setCurrentDayIndex(today.getDay());
+                    setPlayFireAnimation(true);
+                    
                 } else {
                     console.log("Home: streakData não encontrado no Firestore. Iniciando sequência em 0.");
                     setCurrentStreak(0);
@@ -190,22 +214,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             setIsLoadingStreak(false);
             console.log("Home: Carregamento de sequência finalizado.");
         }
-    }, []);
+    }, [showAlert]); // Adicionado showAlert como dependência
 
     const saveStreakAndDailyLogData = useCallback(async (
         newStreak: number, 
         newCompletedDays: string[], 
-        newCurrentDayIndex: number,
-        dailyLogData: DailyLog // Novo parâmetro para os dados diários
+        dailyLogData: DailyLog
     ) => {
         const user = auth.currentUser;
         if (!user) {
             console.error("Home: Usuário não logado, não pode salvar sequência ou dados diários.");
-            Alert.alert("Erro", "Você precisa estar logado para salvar seu progresso.");
+            showAlert("Erro", "Você precisa estar logado para salvar seu progresso."); // Usando showAlert
             return;
         }
 
-        const todayDateISO = format(new Date(), 'yyyy-MM-dd'); // Formato ISO para a data
+        const todayDateISO = format(new Date(), 'yyyy-MM-dd');
 
         const updatedStreakData: StreakData = {
             currentStreak: newStreak,
@@ -217,23 +240,23 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             const userDocRef = doc(db, "usuarios", user.uid);
             await updateDoc(userDocRef, { 
                 streakData: updatedStreakData,
-                [`dailyLogs.${todayDateISO}`]: dailyLogData // Salva os dados diários no mapa dailyLogs
+                [`dailyLogs.${todayDateISO}`]: dailyLogData
             });
             console.log("Home: Sequência e dados diários salvos com sucesso no Firestore:", updatedStreakData, dailyLogData);
+            showAlert("Sucesso", "Seu progresso foi salvo!"); // Usando showAlert para sucesso
         } catch (error) {
             console.error("Home: Erro ao salvar dados de sequência ou diários:", error);
-            Alert.alert("Erro", "Não foi possível salvar seu progresso. Tente novamente.");
+            showAlert("Erro", "Não foi possível salvar seu progresso. Tente novamente."); // Usando showAlert para erro
         }
-    }, []);
+    }, [showAlert]);
 
 
     // --- EFEITOS ---
     useEffect(() => {
-        // Quando a tela está focada, tenta carregar os dados de sequência
         if (isFocused) {
             loadStreakData();
         }
-    }, [isFocused, loadStreakData]); // Recarrega sempre que a tela foca
+    }, [isFocused, loadStreakData]);
 
     useEffect(() => {
         if (playFireAnimation) {
@@ -257,8 +280,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
     
     const handleSaveData = async () => {
-        const todayName = days[new Date().getDay()].day; // Pega o nome do dia de hoje (ex: 'Seg')
-        const todayDateISO = format(new Date(), 'yyyy-MM-dd'); // Data atual para a chave do dailyLog
+        const today = new Date();
+        const todayName = days[today.getDay()].day;
+        const todayDateISO = format(today, 'yyyy-MM-dd');
 
         let newStreak = currentStreak;
         let newCompletedDays = [...completedDays];
@@ -266,22 +290,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const user = auth.currentUser;
         if (!user) {
             console.error("Home: Usuário não logado ao tentar salvar dados. Operação abortada.");
-            Alert.alert("Erro", "Você precisa estar logado para salvar seu progresso.");
+            showAlert("Erro", "Você precisa estar logado para salvar seu progresso."); // Usando showAlert
             handleCloseModal();
             return;
         }
 
-        // Validação dos inputs
+        // Validação dos inputs - AGORA USANDO showAlert
         const parsedCalories = parseFloat(calories);
         const parsedWeight = parseFloat(weight);
         const parsedWater = parseFloat(water);
 
         if (isNaN(parsedCalories) || isNaN(parsedWeight) || isNaN(parsedWater)) {
-            Alert.alert("Erro", "Por favor, insira valores numéricos válidos para Calorias, Peso e Água.");
+            showAlert("Erro de Validação", "Por favor, insira valores numéricos válidos para Calorias, Peso e Água."); // Usando showAlert
             return;
         }
 
-        // Carrega os dados mais recentes do Firestore antes de atualizar
         try {
             const userDocRef = doc(db, "usuarios", user.uid);
             const userDocSnap = await getDoc(userDocRef);
@@ -292,64 +315,61 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
             const lastDateISO = latestStreakData?.lastCompletionDate;
             const lastDate = lastDateISO ? parseISO(lastDateISO) : null;
-            const today = new Date();
-
+            
             if (lastDate && isToday(lastDate)) {
-                // Já completou hoje
                 console.log("Home: Meta diária já completada para hoje. Apenas atualizando dados diários.");
-                // Não altera a streak, apenas os dados diários
             } else if (lastDate && isYesterday(lastDate)) {
-                // Completou ontem, continua a sequência
                 newStreak += 1;
                 console.log("Home: Sequência continuada. Nova sequência:", newStreak);
             } else {
-                // Sequência perdida ou primeiro dia
-                newStreak = 1; // Começa nova sequência
-                // A cada nova sequência/dia, resetamos os dias da semana completados
+                newStreak = 1;
                 newCompletedDays = []; 
                 console.log("Home: Nova sequência iniciada/resetada:", newStreak);
             }
 
-            // Adiciona o dia da semana atual aos dias completados se ainda não estiver lá
             if (!newCompletedDays.includes(todayName)) {
                 newCompletedDays.push(todayName);
             }
 
-            // Prepara os dados diários para salvar
             const dailyLogData: DailyLog = {
                 calories: parsedCalories,
                 weight: parsedWeight,
                 water: parsedWater,
-                timestamp: new Date().toISOString(), // Salva a data e hora exata da submissão
+                timestamp: today.toISOString(),
             };
-
-            // Atualiza os estados locais
+            
             setCurrentStreak(newStreak);
             setCompletedDays(newCompletedDays);
-            setCurrentDayIndex(today.getDay()); // Garante que o dia ativo é o de hoje
+            setCurrentDayIndex(today.getDay());
 
-            setPlayFireAnimation(true); // Anima o fogo
+            setPlayFireAnimation(true);
             
-            // Salva os dados no Firestore
-            await saveStreakAndDailyLogData(newStreak, newCompletedDays, today.getDay(), dailyLogData);
-
-            Alert.alert("Sucesso", "Seu progresso foi salvo!");
+            await saveStreakAndDailyLogData(newStreak, newCompletedDays, dailyLogData);
 
         } catch (error) {
             console.error("Home: Erro ao processar ou salvar dados diários:", error);
-            Alert.alert("Erro", "Não foi possível salvar seu progresso. Tente novamente.");
+            showAlert("Erro ao Salvar", "Não foi possível salvar seu progresso. Tente novamente."); // Usando showAlert
         } finally {
-            handleCloseModal(); // Fechar modal independentemente do sucesso/falha
+            handleCloseModal();
         }
     };
 
-    // Ajuste nas chamadas de navegação para os nomes das abas no BottomTabNavigator
     const navigateToInsights = () => {
         navigation.navigate('ProgressoDetalhadoTab');
     };
     const navigateToProfile = () => {
         navigation.navigate('PerfilTab');
     };
+
+    const days = [
+        { day: 'Dom', label: 'Dom' },
+        { day: 'Seg', label: 'Seg' },
+        { day: 'Ter', label: 'Ter' },
+        { day: 'Qua', label: 'Qua' },
+        { day: 'Qui', label: 'Qui' },
+        { day: 'Sex', label: 'Sex' },
+        { day: 'Sab', label: 'Sab' },
+    ];
 
     return (
         <View style={styles.rootContainer}>
@@ -458,7 +478,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                     {...dayItem} 
                                     isActive={index === currentDayIndex} 
                                     isCompleted={completedDays.includes(dayItem.day)} 
-                                    onPress={() => {}} // Sem ação de clique para os dias individuais, apenas visual
+                                    onPress={() => {}}
                                 />
                             ))}
                         </View>
@@ -488,6 +508,15 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            {/* Renderiza o CustomAlertModal aqui */}
+            <CustomAlertModal
+                isVisible={isAlertVisible}
+                title={alertTitle}
+                message={alertMessage}
+                onClose={hideAlert}
+                type={'error'} // Sempre 'error' para este cenário de validação
+            />
         </View>
     );
 };
@@ -735,7 +764,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: 16,
     },
-    errorTextSmall: { // Novo estilo para erros menores
+    errorTextSmall: {
         color: '#C62828',
         fontSize: 14,
         marginTop: 5,

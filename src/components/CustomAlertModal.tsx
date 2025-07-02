@@ -10,7 +10,7 @@ interface CustomAlertModalProps {
   title: string;
   message: string;
   onClose: () => void;
-  type?: 'success' | 'error' | 'info';
+  type: 'success' | 'error' | 'info'; // Added 'info' to the type
 }
 
 // CORREÇÃO: Removido o tipo de retorno explícito.
