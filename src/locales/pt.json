@@ -76,13 +76,21 @@
     "enter": "Entrar"
   },
     "recuperarSenha": {
-  "title": "Recuperar Senha",
-  "descriptionLine1": "Fique tranquilo(a)!",
-  "descriptionLine2": "Envie seu e-mail para alterar sua senha.",
-  "emailPlaceholder": "E-mail",
-  "sendButton": "Enviar"
-},
-
+    "title": "Esqueceu a senha?",
+    "descriptionLine1": "Não se preocupe!",
+    "descriptionLine2": "Insira seu e-mail para recuperar sua senha.",
+    "emailPlaceholder": "Digite seu e-mail",
+    "sendButton": "Enviar",
+    
+    "successTitle": "Sucesso!",
+    "emailSentMessage": "Um link de recuperação foi enviado para a sua caixa de entrada.",
+    
+    "errorTitle": "Erro",
+    "emptyEmailError": "Por favor, digite seu e-mail.",
+    "invalidEmailError": "O formato do e-mail digitado é inválido.",
+    "emailNotFoundError": "Este e-mail não está cadastrado em nosso sistema.",
+    "genericError": "Ocorreu um erro. Por favor, tente novamente."
+  },
     "progress": {
       "title": "Seu Progresso",
       "subtitle": "Acompanhe seu progresso e observe o quanto está perto da sua meta!",
