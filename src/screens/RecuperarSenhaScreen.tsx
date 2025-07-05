@@ -8,12 +8,70 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebaseConfig';
 
 const RecuperarSenhaScreen = () => {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
+
+  const handlePasswordReset = async () => {
+    console.log('--- INICIANDO PROCESSO DE RECUPERAÇÃO ---');
+
+    if (email.trim() === '') {
+      Alert.alert(t('recuperarSenha.errorTitle'), t('recuperarSenha.emptyEmailError'));
+      return;
+    }
+
+    setLoading(true);
+    const userEmail = email.trim().toLowerCase();
+
+    try {
+      console.log(`Tentando enviar email de recuperação para: '${userEmail}'`);
+      
+      await sendPasswordResetEmail(auth, userEmail);
+      
+      console.log('Email de recuperação enviado com sucesso');
+      setLoading(false);
+      
+      Alert.alert(
+        t('recuperarSenha.successTitle'),
+        t('recuperarSenha.emailSentMessage')
+      );
+
+    } catch (error: any) {
+      setLoading(false);
+      console.log(`Firebase retornou um erro. Código do erro: ${error.code}`);
+      console.error('Detalhes do erro:', error);
+
+      if (error.code === 'auth/user-not-found') {
+        Alert.alert(
+          t('recuperarSenha.errorTitle'),
+          t('recuperarSenha.emailNotFoundError')
+        );
+      } else if (error.code === 'auth/invalid-email') {
+        Alert.alert(
+          t('recuperarSenha.errorTitle'),
+          'Por favor, insira um endereço de email válido.'
+        );
+      } else if (error.code === 'auth/too-many-requests') {
+        Alert.alert(
+          t('recuperarSenha.errorTitle'),
+          'Muitas tentativas foram feitas. Tente novamente mais tarde.'
+        );
+      } else {
+        Alert.alert(
+          t('recuperarSenha.errorTitle'),
+          'Email não encontrado no sistema.'
+        );
+      }
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -28,7 +86,6 @@ const RecuperarSenhaScreen = () => {
               {t('recuperarSenha.descriptionLine1')}{'\n'}
               {t('recuperarSenha.descriptionLine2')}
             </Text>
-
             <TextInput
               style={styles.input}
               placeholder={t('recuperarSenha.emailPlaceholder')}
@@ -37,11 +94,19 @@ const RecuperarSenhaScreen = () => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              editable={!loading}
             />
           </View>
-
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>{t('recuperarSenha.sendButton')}</Text>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handlePasswordReset}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#000000" />
+            ) : (
+              <Text style={styles.buttonText}>{t('recuperarSenha.sendButton')}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -96,6 +161,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'Fustat-Bold',
+  },
+  buttonDisabled: {
+    backgroundColor: '#5a8e22',
   },
 });
 
