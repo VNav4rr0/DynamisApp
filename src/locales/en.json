@@ -21,8 +21,8 @@
       "genderWoman": "Woman",
       "activityLevelPlaceholder": "Activity Level...",
       "activityLevelLight": "Light",
-      "activityLevelModerado": "Moderate",
-      "activityLevelIntenso": "Intense",
+      "activityLevelModerate": "Moderate",
+      "activityLevelIntense": "Intense",
       "currentWeightPlaceholder": "Current Weight",
       "targetWeightPlaceholder": "Target Weight",
       "objectivePlaceholder": "Objective...",
@@ -54,34 +54,34 @@
       "arrowIcon": "→",
       "alertButtonUnderstand": "Understand"
     },
-     "login": {
-    "title": "Welcome",
-    "subtitleLine1": "Let's monitor",
-    "subtitleLine2": "your pet's health!",
-    "emailPlaceholder": "Enter your email",
-    "passwordPlaceholder": "Enter your password",
-    "forgotPassword": "Forgot password",
-    "loginButton": "Login",
-    "enterWithCode": "Sign in with code"
+    "login": {
+      "title": "Welcome",
+      "subtitleLine1": "Let's monitor",
+      "subtitleLine2": "your pet's health!",
+      "emailPlaceholder": "Enter your email",
+      "passwordPlaceholder": "Enter your password",
+      "forgotPassword": "Forgot password",
+      "loginButton": "Login",
+      "enterWithCode": "Sign in with code"
     },
-  "modalCode": {
-    "title": "Access Code",
-    "subtitle": "Enter the client account verification code",
-    "verify": "Verify",
-    "back": "Back"
-  },
-  "modalVerified": {
-    "title": "Verified!",
-    "subtitle": "Let's start transforming {{name}}'s results.",
-    "enter": "Log In"
-  },  
-  "recuperarSenha": {
-  "title": "Recover Password",
-  "descriptionLine1": "Don't worry!",
-  "descriptionLine2": "Enter your email to reset your password.",
-  "emailPlaceholder": "E-mail",
-  "sendButton": "Send"
-},
+    "modalCode": {
+      "title": "Access Code",
+      "subtitle": "Enter the client account verification code",
+      "verify": "Verify",
+      "back": "Back"
+    },
+    "modalVerified": {
+      "title": "Verified!",
+      "subtitle": "Let's start transforming {{name}}'s results.",
+      "enter": "Log In"
+    },
+    "recuperarSenha": {
+      "title": "Recover Password",
+      "descriptionLine1": "Don't worry!",
+      "descriptionLine2": "Enter your email to reset your password.",
+      "emailPlaceholder": "E-mail",
+      "sendButton": "Send"
+    },
     "progress": {
       "title": "Your Progress",
       "subtitle": "Track your progress and see how close you are to your goal!",
@@ -99,8 +99,82 @@
       "home": "Home",
       "goals": "Goals",
       "profile": "Profile"
-
-      
+    },
+    "manageInfo": {
+      "title": "Manage Information",
+      "loading": "Loading...",
+      "personalDataSectionTitle": "Personal Data",
+      "fullNamePlaceholder": "Full Name",
+      "yourAgePlaceholder": "Your Age",
+      "yourHeightPlaceholder": "Your Height",
+      "personalGoalsSectionTitle": "Personal Goals",
+      "currentWeightPlaceholder": "Current Weight",
+      "targetWeightPlaceholder": "Target Weight",
+      "accountSectionTitle": "Account",
+      "emailPlaceholder": "E-mail",
+      "changePasswordButton": "Change Password",
+      "currentPasswordPlaceholder": "Current Password",
+      "newPasswordPlaceholder": "New Password",
+      "cancelButton": "Cancel",
+      "saveChangesButton": "Save Changes",
+      "deleteAccountButton": "Delete Account",
+      "permanentActionWarning": "This action is permanent and cannot be undone.",
+      "authErrorTitle": "Authentication Error",
+      "notLoggedInMessage": "You are not logged in.",
+      "errorTitle": "Error",
+      "userDataNotFoundMessage": "User data not found.",
+      "failedToLoadInfoMessage": "Could not load your information. Please try again.",
+      "requiredFieldsTitle": "Required Fields",
+      "enterNewPasswordMessage": "Please enter the new password.",
+      "weakPasswordTitle": "Weak Password",
+      "weakPasswordMessage": "The new password must be at least 6 characters long.",
+      "enterCurrentPasswordMessage": "Please enter your current password to confirm the password change.",
+      "confirmationNeededTitle": "Confirmation Needed",
+      "emailChangeRequiresCurrentPasswordMessage": "To change the email, please enter your current password.",
+      "currentPasswordRequiredForChanges": "Current password is required to change email or password.",
+      "successTitle": "Success!",
+      "infoUpdatedMessage": "Your information has been updated successfully.",
+      "authErrorInvalidPasswordTitle": "Authentication Error",
+      "invalidCurrentPasswordMessage": "Invalid current password. Please check.",
+      "reauthenticationNeededTitle": "Reauthentication Needed",
+      "sessionExpiredMessage": "Your session has expired. Please log in again to make this change.",
+      "invalidEmailFormatTitle": "Email Error",
+      "invalidEmailFormatMessage": "The email format is invalid.",
+      "emailAlreadyInUseMessage": "This email is already in use by another account.",
+      "updateErrorMessage": "Could not save your changes. Please try again.",
+      "accountDeletedTitle": "Account Deleted",
+      "accountDeletedMessage": "Your account has been successfully deleted.",
+      "reauthForDeleteMessage": "Your session has expired or requires recent login. Please log in again and try to delete the account.",
+      "deleteErrorMessage": "Could not delete your account. Please try again."
+    },
+    "profile": {
+      "loading": "Loading...",
+      "sessionExpired": "Session expired. Please log in to continue.",
+      "userDataLoadError": "Could not load your data. Please try again.",
+      "userDataNotFound": "User data not found. Please log in again.",
+      "notificationTitle": "Notification",
+      "notificationSubtitle": "Reminder to not lose your streak",
+      "manageInfoTitle": "Manage Information",
+      "manageInfoSubtitle": "Update your personal data",
+      "logoutTitle": "Log Out",
+      "logoutSubtitle": "Disconnect from the application",
+      "shareCodePrompt": "Generate a sharing code for the nutritionist",
+      "generateCodeButton": "Generate Code",
+      "requestPending": "Request Pending",
+      "sendRequestButton": "Send Request",
+      "snackbarGenerateCodeLoggedOut": "You need to be logged in to generate the sharing code.",
+      "snackbarShareCodeError": "Error fetching sharing code. Check your connection.",
+      "snackbarNotificationLoggedOut": "You need to be logged in to change this setting.",
+      "snackbarNotificationSuccess": "Notification preference saved!",
+      "snackbarNotificationError": "Could not update your notification preference.",
+      "snackbarRequestLoggedOut": "You need to be logged in to send a request.",
+      "snackbarRequestSuccess": "Your request has been sent successfully!",
+      "snackbarRequestError": "Could not send your request. Please try again.",
+      "snackbarLogoutSuccess": "You have been logged out successfully!",
+      "snackbarLogoutError": "Could not log out. Please try again.",
+      "modalVerificationCodeTitle": "Verification Code",
+      "modalBackButton": "Back",
+      "shareCodeNotFound": "Sharing code not found for this user."
     }
   }
 }

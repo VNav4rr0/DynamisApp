@@ -82,7 +82,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
       setIsLoading(true);
       const user = auth.currentUser;
       if (!user) {
-        showAlert("Erro de Autenticação", "Você não está logado.", 'error');
+        showAlert(t('manageInfo.authErrorTitle'), t('manageInfo.notLoggedInMessage'), 'error');
         setIsLoading(false); 
         navigation.goBack();
         return;
@@ -111,18 +111,18 @@ const GerenciarInformacoesScreen: React.FC = () => {
           setEmail(userData.email || '');
 
         } else {
-          showAlert("Erro", "Dados do usuário não encontrados.", 'error');
+          showAlert(t('manageInfo.errorTitle'), t('manageInfo.userDataNotFoundMessage'), 'error');
         }
       } catch (error) {
         console.error("Erro ao carregar dados do usuário:", error);
-        showAlert("Erro", "Não foi possível carregar suas informações. Tente novamente.", 'error');
+        showAlert(t('manageInfo.errorTitle'), t('manageInfo.failedToLoadInfoMessage'), 'error');
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchUserData();
-  }, [showAlert, navigation]);
+  }, [showAlert, navigation, t]); // Adicionado 't' às dependências
 
   // --- Funções de Validação ---
   const validateInputs = useCallback(() => {
@@ -157,17 +157,17 @@ const GerenciarInformacoesScreen: React.FC = () => {
       if (!currentPassword.trim()) {
         setCurrentPasswordError(true);
         isValid = false;
-        showAlert("Campos Obrigatórios", "Por favor, digite sua senha atual.", 'error');
+        showAlert(t('manageInfo.requiredFieldsTitle'), t('manageInfo.enterCurrentPasswordMessage'), 'error');
       }
 
       if (!senha.trim()) {
         setSenhaError(true);
         isValid = false;
-        showAlert("Campos Obrigatórios", "Por favor, digite a nova senha.", 'error');
+        showAlert(t('manageInfo.requiredFieldsTitle'), t('manageInfo.enterNewPasswordMessage'), 'error');
       } else if (senha.length < 6) {
         setSenhaError(true);
         isValid = false;
-        showAlert("Senha Fraca", "A nova senha deve ter pelo menos 6 caracteres.", 'error');
+        showAlert(t('manageInfo.weakPasswordTitle'), t('manageInfo.weakPasswordMessage'), 'error');
       }
     } else {
         // Se os campos de senha não estão visíveis, mas o e-mail foi alterado,
@@ -176,12 +176,12 @@ const GerenciarInformacoesScreen: React.FC = () => {
         if (isEmailChanged && !currentPassword.trim()) { // Apenas exige se o email mudou
             setCurrentPasswordError(true);
             isValid = false;
-            showAlert("Confirmação Necessária", "Para alterar o e-mail, por favor, digite sua senha atual.", 'error');
+            showAlert(t('manageInfo.confirmationNeededTitle'), t('manageInfo.emailChangeRequiresCurrentPasswordMessage'), 'error');
         }
     }
 
     return isValid;
-  }, [nome, idade, altura, genero, pesoAtual, pesoMeta, objetivo, nivelAtividade, email, senha, currentPassword, showPasswordFields, showAlert]);
+  }, [nome, idade, altura, genero, pesoAtual, pesoMeta, objetivo, nivelAtividade, email, senha, currentPassword, showPasswordFields, showAlert, t]);
 
 
   // --- Salvar Alterações ---
@@ -193,7 +193,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
     setIsLoading(true);
     const user = auth.currentUser;
     if (!user) {
-      showAlert("Erro de Autenticação", "Você não está logado.", 'error');
+      showAlert(t('manageInfo.authErrorTitle'), t('manageInfo.notLoggedInMessage'), 'error');
       setIsLoading(false);
       return;
     }
@@ -205,7 +205,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
       // Reautenticação necessária se o e-mail for alterado OU se os campos de senha estiverem visíveis e uma nova senha for preenchida
       if (isEmailChanged || isPasswordChanged) {
         if (!currentPassword.trim()) {
-            showAlert("Erro", "Senha atual é obrigatória para alterar e-mail ou senha.", 'error');
+            showAlert(t('manageInfo.errorTitle'), t('manageInfo.currentPasswordRequiredForChanges'), 'error');
             setIsLoading(false);
             return;
         }
@@ -241,7 +241,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
         email: email.trim(),
       });
 
-      showAlert("Sucesso!", "Suas informações foram atualizadas com sucesso.", 'success');
+      showAlert(t('manageInfo.successTitle'), t('manageInfo.infoUpdatedMessage'), 'success');
       
       // Limpar campos de senha e ocultá-los após sucesso
       setShowPasswordFields(false);
@@ -253,35 +253,35 @@ const GerenciarInformacoesScreen: React.FC = () => {
     } catch (error: any) {
       console.error("Erro ao salvar alterações:", error);
       if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        showAlert("Erro de Autenticação", "Senha atual inválida. Por favor, verifique.", 'error');
+        showAlert(t('manageInfo.authErrorInvalidPasswordTitle'), t('manageInfo.invalidCurrentPasswordMessage'), 'error');
       } else if (error.code === 'auth/requires-recent-login') {
-        showAlert("Reautenticação Necessária", "Sua sessão expirou. Por favor, faça login novamente para realizar esta alteração.", 'error');
+        showAlert(t('manageInfo.reauthenticationNeededTitle'), t('manageInfo.sessionExpiredMessage'), 'error');
       } else if (error.code === 'auth/invalid-email') {
-        showAlert("Erro de E-mail", "O formato do e-mail é inválido.", 'error');
+        showAlert(t('manageInfo.invalidEmailFormatTitle'), t('manageInfo.invalidEmailFormatMessage'), 'error');
       } else if (error.code === 'auth/email-already-in-use') {
-        showAlert("Erro de E-mail", "Este e-mail já está em uso por outra conta.", 'error');
+        showAlert(t('manageInfo.invalidEmailFormatTitle'), t('manageInfo.emailAlreadyInUseMessage'), 'error');
       }
       else {
-        showAlert("Erro ao Atualizar", "Não foi possível salvar suas alterações. Tente novamente.", 'error');
+        showAlert(t('manageInfo.errorTitle'), t('manageInfo.updateErrorMessage'), 'error');
       }
     } finally {
       setIsLoading(false);
     }
-  }, [nome, idade, altura, genero, pesoAtual, pesoMeta, objetivo, nivelAtividade, email, senha, currentPassword, showPasswordFields, showAlert, validateInputs]);
+  }, [nome, idade, altura, genero, pesoAtual, pesoMeta, objetivo, nivelAtividade, email, senha, currentPassword, showPasswordFields, showAlert, validateInputs, t]);
 
 
   // --- Excluir Conta ---
   const handleDeleteAccount = useCallback(async () => {
     const user = auth.currentUser;
     if (!user) {
-      showAlert("Erro de Autenticação", "Você não está logado.", 'error');
+      showAlert(t('manageInfo.authErrorTitle'), t('manageInfo.notLoggedInMessage'), 'error');
       return;
     }
 
-    const passwordToReauthenticate = currentPassword; // Usa o mesmo campo de senha atual para exclusão
+    const passwordToReauthenticate = currentPassword;
 
     if (!passwordToReauthenticate.trim()) {
-        showAlert("Reautenticação Necessária", "Por favor, digite sua senha atual para excluir a conta.", 'error');
+        showAlert(t('manageInfo.reauthenticationNeededTitle'), t('manageInfo.enterCurrentPasswordMessage'), 'error');
         return;
     }
 
@@ -299,28 +299,28 @@ const GerenciarInformacoesScreen: React.FC = () => {
         await deleteUser(user);
         console.log("Usuário excluído do Firebase Auth.");
 
-        showAlert("Conta Excluída", "Sua conta foi excluída com sucesso.", 'success');
-        navigation.navigate('BoasVindas' as never); // Redireciona após exclusão
+        showAlert(t('manageInfo.accountDeletedTitle'), t('manageInfo.accountDeletedMessage'), 'success');
+        navigation.navigate('BoasVindas' as never);
     } catch (error: any) {
         console.error("Erro ao excluir conta:", error);
         if (error.code === 'auth/requires-recent-login') {
-            showAlert("Reautenticação Necessária", "Sua sessão expirou ou requer login recente. Por favor, faça login novamente e tente excluir a conta.", 'error');
+            showAlert(t('manageInfo.reauthenticationNeededTitle'), t('manageInfo.reauthForDeleteMessage'), 'error');
         } else if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            showAlert("Erro de Autenticação", "Senha atual inválida. Não foi possível excluir a conta.", 'error');
+            showAlert(t('manageInfo.authErrorInvalidPasswordTitle'), t('manageInfo.invalidCurrentPasswordMessage'), 'error');
         } else {
-            showAlert("Erro ao Excluir", "Não foi possível excluir sua conta. Tente novamente.", 'error');
+            showAlert(t('manageInfo.errorTitle'), t('manageInfo.deleteErrorMessage'), 'error');
         }
     } finally {
         setIsLoading(false);
     }
-  }, [currentPassword, showAlert, navigation]);
+  }, [currentPassword, showAlert, navigation, t]);
 
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#AEF359" />
-        <Text style={styles.loadingText}>Carregando...</Text>
+        <Text style={styles.loadingText}>{t('manageInfo.loading')}</Text>
       </View>
     );
   }
@@ -333,16 +333,16 @@ const GerenciarInformacoesScreen: React.FC = () => {
           <Ionicons name="arrow-back" size={24} color="white" style={{ marginBottom: -4 }} />
         </TouchableOpacity>
         <View>
-          <Text style={styles.headerText}>Gerenciar Informações</Text>
+          <Text style={styles.headerText}>{t('manageInfo.title')}</Text>
           <View style={styles.headerLine} />
         </View>
       </View>
 
       {/* Dados Pessoais */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Dados Pessoais</Text>
+        <Text style={styles.sectionTitle}>{t('manageInfo.personalDataSectionTitle')}</Text>
         <TextInput
-          placeholder="Nome completo"
+          placeholder={t('manageInfo.fullNamePlaceholder')}
           placeholderTextColor="#888"
           style={[styles.input, nomeError && styles.inputError]}
           value={nome}
@@ -350,7 +350,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
         />
         <View style={styles.row}>
           <TextInput
-            placeholder="Sua Idade"
+            placeholder={t('manageInfo.yourAgePlaceholder')}
             placeholderTextColor="#888"
             style={[styles.input, styles.halfInput, idadeError && styles.inputError]}
             keyboardType="numeric"
@@ -358,7 +358,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
             onChangeText={(text) => { setIdade(text); setIdadeError(false); }}
           />
           <TextInput
-            placeholder="Sua Altura"
+            placeholder={t('manageInfo.yourHeightPlaceholder')}
             placeholderTextColor="#888"
             style={[styles.input, styles.halfInput, alturaError && styles.inputError]}
             keyboardType="numeric"
@@ -372,24 +372,24 @@ const GerenciarInformacoesScreen: React.FC = () => {
             onPress={() => { setGenero('Homem'); setGeneroError(false); }}
           >
             {genero === 'Homem' && <MaterialIcons name="check" size={18} color="#FFF" />}
-            <Text style={styles.genderText}>Homem</Text>
+            <Text style={styles.genderText}>{t('cadastro.genderMan')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.genderButton, genero === 'Mulher' && styles.genderButtonActive]}
             onPress={() => { setGenero('Mulher'); setGeneroError(false); }}
           >
             {genero === 'Mulher' && <MaterialIcons name="check" size={18} color="#FFF" />}
-            <Text style={styles.genderText}>Mulher</Text>
+            <Text style={styles.genderText}>{t('cadastro.genderWoman')}</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Meta Pessoais */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Meta Pessoais</Text>
+        <Text style={styles.sectionTitle}>{t('manageInfo.personalGoalsSectionTitle')}</Text>
         <View style={styles.row}>
           <TextInput
-            placeholder="Peso Atual"
+            placeholder={t('manageInfo.currentWeightPlaceholder')}
             placeholderTextColor="#888"
             style={[styles.input, styles.halfInput, pesoAtualError && styles.inputError]}
             keyboardType="numeric"
@@ -400,7 +400,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
             <Ionicons name="arrow-forward" size={36} color="#C2185B" style={{ marginBottom: 8 }} />
           </View>
           <TextInput
-            placeholder="Peso Meta"
+            placeholder={t('manageInfo.targetWeightPlaceholder')}
             placeholderTextColor="#888"
             style={[styles.input, styles.halfInput, pesoMetaError && styles.inputError]}
             keyboardType="numeric"
@@ -412,7 +412,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
           <RNPickerSelect
             onValueChange={(value) => { setObjetivo(value); setObjetivoError(false); }}
             value={objetivo}
-            placeholder={{ label: "Objetivo", value: null, color: '#888' }}
+            placeholder={{ label: t('cadastro.objectivePlaceholder'), value: null, color: '#888' }}
             items={objectiveOptions}
             style={pickerSelectStyles}
             useNativeAndroidPickerStyle={false}
@@ -423,7 +423,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
           <RNPickerSelect
             onValueChange={(value) => { setNivelAtividade(value); setNivelAtividadeError(false); }}
             value={nivelAtividade}
-            placeholder={{ label: "Nível de Atividades", value: null, color: '#888' }}
+            placeholder={{ label: t('cadastro.activityLevelPlaceholder'), value: null, color: '#888' }}
             items={activityLevelOptions}
             style={pickerSelectStyles}
             useNativeAndroidPickerStyle={false}
@@ -434,9 +434,9 @@ const GerenciarInformacoesScreen: React.FC = () => {
 
       {/* Conta */}
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Conta</Text>
+        <Text style={styles.sectionTitle}>{t('manageInfo.accountSectionTitle')}</Text>
         <TextInput
-          placeholder="E-mail"
+          placeholder={t('manageInfo.emailPlaceholder')}
           placeholderTextColor="#888"
           style={[styles.input, emailError && styles.inputError]}
           keyboardType="email-address"
@@ -447,17 +447,17 @@ const GerenciarInformacoesScreen: React.FC = () => {
         {!showPasswordFields ? (
           <TouchableOpacity style={styles.changePasswordButton} onPress={() => setShowPasswordFields(true)}>
             <MaterialIcons name="lock" size={20} color="#AEF359" />
-            <Text style={styles.changePasswordButtonText}>Alterar Senha</Text>
+            <Text style={styles.changePasswordButtonText}>{t('manageInfo.changePasswordButton')}</Text>
           </TouchableOpacity>
         ) : (
           <>
             {/* Campo Senha Atual */}
             <View style={[styles.passwordInputContainer, currentPasswordError && styles.inputError]}>
               <TextInput
-                placeholder="Senha Atual"
+                placeholder={t('manageInfo.currentPasswordPlaceholder')}
                 placeholderTextColor="#888"
                 style={styles.passwordTextInput}
-                secureTextEntry={!showCurrentPassword} // Controla a visibilidade
+                secureTextEntry={!showCurrentPassword}
                 value={currentPassword}
                 onChangeText={(text) => { setCurrentPassword(text); setCurrentPasswordError(false); }}
               />
@@ -476,10 +476,10 @@ const GerenciarInformacoesScreen: React.FC = () => {
             {/* Campo Nova Senha */}
             <View style={[styles.passwordInputContainer, senhaError && styles.inputError]}>
               <TextInput
-                placeholder="Nova Senha"
+                placeholder={t('manageInfo.newPasswordPlaceholder')}
                 placeholderTextColor="#888"
                 style={styles.passwordTextInput}
-                secureTextEntry={!showNewPassword} // Controla a visibilidade
+                secureTextEntry={!showNewPassword}
                 value={senha}
                 onChangeText={(text) => { setSenha(text); setSenhaError(false); }}
               />
@@ -505,7 +505,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
               setShowNewPassword(false);
             }}>
               <MaterialIcons name="cancel" size={20} color="#FF6347" />
-              <Text style={styles.cancelPasswordChangeButtonText}>Cancelar</Text>
+              <Text style={styles.cancelPasswordChangeButtonText}>{t('manageInfo.cancelButton')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -518,7 +518,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
         ) : (
           <>
             <MaterialIcons name="edit" size={20} color="#000" />
-            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+            <Text style={styles.saveButtonText}>{t('manageInfo.saveChangesButton')}</Text>
           </>
         )}
       </TouchableOpacity>
@@ -529,12 +529,12 @@ const GerenciarInformacoesScreen: React.FC = () => {
         ) : (
           <>
             <MaterialIcons name="delete" size={20} color="red" />
-            <Text style={styles.deleteButtonText}>Excluir Conta</Text>
+            <Text style={styles.deleteButtonText}>{t('manageInfo.deleteAccountButton')}</Text>
           </>
         )}
       </TouchableOpacity>
 
-      <Text style={styles.warningText}>Esta ação é permanente e não pode ser desfeita.</Text>
+      <Text style={styles.warningText}>{t('manageInfo.permanentActionWarning')}</Text>
 
       <CustomAlertModal
         isVisible={isAlertVisible}
@@ -736,7 +736,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-  // ESTILOS PARA OS CAMPOS DE SENHA COM OLHO
   passwordInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -757,4 +756,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GerenciarInformacoesScreen; 
+export default GerenciarInformacoesScreen;

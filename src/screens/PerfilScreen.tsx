@@ -8,29 +8,33 @@ import {
     ScrollView,
     Switch,
     ActivityIndicator,
-    Animated, // Manter se usar outras animações (bellRotateAnim)
-    Dimensions, // Manter se usar Dimensions para algo mais
+    Animated,
+    Dimensions,
     Modal
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { auth, db } from '../../firebaseConfig/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next'; // Importar useTranslation
 
-const { width } = Dimensions.get('window'); // Manter se ainda for útil para estilos, caso contrário pode remover
+const { width } = Dimensions.get('window');
 
 // Tipagem para a navegação
 type RootTabParamList = {
-    HomeTab: undefined; // Nome da aba no BottomTabNavigator
-    ProgressoDetalhadoTab: undefined; // Nome da aba no BottomTabNavigator
-    PerfilTab: undefined; // Nome da aba no BottomTabNavigator
+    HomeTab: undefined;
+    ProgressoDetalhadoTab: undefined;
+    PerfilTab: undefined;
     BoasVindasScreen: undefined;
+    ManageInfoScreen: undefined; // Adicione a tipagem para a nova tela aqui
+    GerenciarInformacoes: undefined; // Certifique-se de que esta rota está definida no seu navegador
+    // ... outras rotas que seu StackNavigator possa ter
 };
 
-type ProfileScreenProps = BottomTabScreenProps<RootTabParamList, 'PerfilTab'>; // Ajuste o nome da rota
+type ProfileScreenProps = BottomTabScreenProps<RootTabParamList, 'PerfilTab'>;
 
 const mockBackendApi = {
     updateNotificationPreference: async (userId: string, isEnabled: boolean) => {
@@ -73,9 +77,12 @@ const mockBackendApi = {
 };
 
 
-const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
-    const [userName, setUserName] = useState('Carregando...');
-    const [userEmail, setUserEmail] = useState('carregando...');
+const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
+    const navigation = useNavigation();
+    const { t } = useTranslation(); // Use o hook useTranslation
+
+    const [userName, setUserName] = useState(t('profile.loading'));
+    const [userEmail, setUserEmail] = useState(t('profile.loading'));
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'sent'>('idle');
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
@@ -84,8 +91,6 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
     const snackbarAnim = useRef(new Animated.Value(100)).current;
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarType, setSnackbarType] = useState<'success' | 'error'>('success');
-
- 
 
     const [playBellAnimation, setPlayBellAnimation] = useState(false);
     const bellRotateAnim = useRef(new Animated.Value(0)).current;
@@ -106,7 +111,7 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
         console.log("fetchShareCode: Iniciando busca do código de partilha.");
 
         if (!user) {
-            showSnackbar("Você precisa estar logado para gerar o código de partilha.", 'error');
+            showSnackbar(t('profile.snackbarGenerateCodeLoggedOut'), 'error');
             console.error("fetchShareCode: Usuário não logado.");
             return;
         }
@@ -114,31 +119,32 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
         console.log("fetchShareCode: UID do usuário logado:", user.uid);
 
         try {
-            const userDocRef = doc(db, "usuarios", user.uid);
+            const userDocRef = doc(db as any, "usuarios", user.uid);
             const userDocSnap = await getDoc(userDocRef);
 
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 console.log("fetchShareCode: Dados do usuário encontrados para código:", userData);
-                
+
                 if (userData.codigoPartilha) {
                     console.log("fetchShareCode: Código de partilha encontrado:", userData.codigoPartilha);
                     setShareCode(userData.codigoPartilha);
                     setIsShareCodeVisible(true);
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 } else {
-                    showSnackbar("Código de partilha não encontrado para este usuário.", 'error');
+                    // Esta mensagem não estava no pt.json, adicionei
+                    showSnackbar(t('profile.shareCodeNotFound'), 'error'); // Use tradução
                     console.error("fetchShareCode: O campo 'codigoPartilha' não existe ou está vazio no documento do usuário.", user.uid);
                 }
             } else {
-                showSnackbar("Dados do usuário não encontrados no banco de dados. Tente novamente.", 'error');
+                showSnackbar(t('profile.userDataNotFound'), 'error');
                 console.error("fetchShareCode: Nenhum documento encontrado para o usuário no Firestore com UID:", user.uid);
             }
         } catch (error) {
             console.error("fetchShareCode: Erro ao buscar código de partilha:", error);
-            showSnackbar("Erro ao buscar código de partilha. Verifique sua conexão.", 'error');
+            showSnackbar(t('profile.snackbarShareCodeError'), 'error');
         }
-    }, [showSnackbar]);
+    }, [showSnackbar, t]); // Adicionado 't' às dependências
 
     const [currentAuthUserUid, setCurrentAuthUserUid] = useState<string | null>(null);
     const [isAuthInitializing, setIsAuthInitializing] = useState(true);
@@ -170,8 +176,8 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
             if (currentAuthUserUid === null && !isAuthInitializing) {
                 if (isComponentMounted && isFocused) {
                     console.log("useEffect [currentAuthUserUid]: Usuário nulo (após inicialização) e focado. Redirecionando.");
-                    showSnackbar("Sessão expirada. Faça login para continuar.", 'error');
-                    navigation.navigate('BoasVindasScreen'); 
+                    showSnackbar(t('profile.sessionExpired'), 'error');
+                    navigation.navigate('BoasVindasScreen');
                 } else if (!isFocused) {
                     console.log("useEffect [currentAuthUserUid]: Usuário nulo (após inicialização) mas não focado. Não redirecionando.");
                 }
@@ -180,17 +186,17 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
             } else if (currentAuthUserUid === null && isAuthInitializing) {
                 console.log("useEffect [currentAuthUserUid]: Autenticação inicializando. Aguardando...");
                 if (isComponentMounted) setIsLoadingUserData(true);
-                setUserName('Carregando...');
-                setUserEmail('carregando...');
+                setUserName(t('profile.loading'));
+                setUserEmail(t('profile.loading'));
                 return;
             }
 
             if (isComponentMounted) {
                 setIsLoadingUserData(true);
-                setUserName('Carregando...');
-                setUserEmail('carregando...');
+                setUserName(t('profile.loading'));
+                setUserEmail(t('profile.loading'));
             }
-            
+
             try {
                 console.log("useEffect [currentAuthUserUid]: Carregando dados do Firestore para UID:", currentAuthUserUid);
                 if (!currentAuthUserUid) {
@@ -209,7 +215,7 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                         console.log("useEffect [currentAuthUserUid]: Dados do usuário carregados com sucesso:", userData.nome);
                     } else {
                         console.log("useEffect [currentAuthUserUid]: Documento do usuário não encontrado no Firestore. UID:", currentAuthUserUid);
-                        showSnackbar("Dados do usuário não encontrados. Faça login novamente.", 'error');
+                        showSnackbar(t('profile.userDataNotFound'), 'error');
                         if (isComponentMounted && isFocused) {
                             navigation.navigate('BoasVindasScreen');
                         }
@@ -218,9 +224,9 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
             } catch (error) {
                 console.error("useEffect [currentAuthUserUid]: Erro ao carregar dados do usuário do Firestore:", error);
                 if (isComponentMounted) {
-                    showSnackbar("Não foi possível carregar seus dados. Tente novamente.", 'error');
-                    setUserName('Erro ao carregar');
-                    setUserEmail('erro@erro.com');
+                    showSnackbar(t('profile.userDataLoadError'), 'error');
+                    setUserName(t('profile.userDataLoadError'));
+                    setUserEmail(t('profile.userDataLoadError'));
                 }
             } finally {
                 if (isComponentMounted) {
@@ -231,8 +237,8 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
         };
 
         if (isFocused) {
-             console.log("useEffect [currentAuthUserUid]: Tela focada. Iniciando loadData.");
-             loadData();
+            console.log("useEffect [currentAuthUserUid]: Tela focada. Iniciando loadData.");
+            loadData();
         } else {
             console.log("useEffect [currentAuthUserUid]: Tela não focada. Não carregando dados ainda.");
         }
@@ -240,7 +246,7 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
         return () => {
             isComponentMounted = false;
         };
-    }, [currentAuthUserUid, navigation, showSnackbar, isFocused, isAuthInitializing]);
+    }, [currentAuthUserUid, navigation, showSnackbar, isFocused, isAuthInitializing, t]); // Adicione 't' aqui
 
     // Efeito para o Snackbar
     useEffect(() => {
@@ -268,7 +274,7 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
     const toggleSwitch = useCallback(async () => {
         const user = auth.currentUser;
         if (!user) {
-            showSnackbar("Você precisa estar logado para alterar esta configuração.", 'error');
+            showSnackbar(t('profile.snackbarNotificationLoggedOut'), 'error');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             return;
         }
@@ -282,20 +288,20 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
         try {
             await mockBackendApi.updateNotificationPreference(user.uid, newState);
-            showSnackbar("Preferência de notificação salva!", 'success');
+            showSnackbar(t('profile.snackbarNotificationSuccess'), 'success');
         } catch (error) {
             console.error("Erro ao salvar preferência de notificação no Firestore:", error);
             setNotificationsEnabled(!newState);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            showSnackbar("Não foi possível atualizar sua preferência de notificação.", 'error');
+            showSnackbar(t('profile.snackbarNotificationError'), 'error');
         }
-    }, [notificationsEnabled, showSnackbar]);
+    }, [notificationsEnabled, showSnackbar, t]);
 
 
     const handleSendRequest = useCallback(async () => {
         const user = auth.currentUser;
         if (!user) {
-            showSnackbar("Você precisa estar logado para enviar uma solicitação.", 'error');
+            showSnackbar(t('profile.snackbarRequestLoggedOut'), 'error');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             return;
         }
@@ -306,27 +312,33 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
             await mockBackendApi.sendNutritionistRequest(user.uid);
             setRequestStatus('sent');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            showSnackbar("Sua solicitação foi enviada com sucesso!", 'success');
+            showSnackbar(t('profile.snackbarRequestSuccess'), 'success');
         } catch (error) {
             console.error("Erro ao enviar solicitação ao nutricionista para o Firestore:", error);
             setRequestStatus('idle');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            showSnackbar("Não foi possível enviar sua solicitação. Tente novamente.", 'error');
+            showSnackbar(t('profile.snackbarRequestError'), 'error');
         }
-    }, [requestStatus, showSnackbar]);
+    }, [requestStatus, showSnackbar, t]);
 
     const handleLogout = useCallback(async () => {
         try {
             await mockBackendApi.logoutUser();
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            showSnackbar("Você foi desconectado com sucesso!", 'success');
+            showSnackbar(t('profile.snackbarLogoutSuccess'), 'success');
             navigation.navigate('BoasVindasScreen');
         } catch (error) {
             console.error("Erro ao fazer logout:", error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            showSnackbar("Não foi possível sair da conta. Tente novamente.", 'error');
+            showSnackbar(t('profile.snackbarLogoutError'), 'error');
         }
-    }, [navigation, showSnackbar]);
+    }, [navigation, showSnackbar, t]);
+
+    // NOVA FUNÇÃO: handleManageInfo para navegar
+    const handleManageInfo = useCallback(() => {
+        console.log('Navegando para a tela de Gerenciar Informações');
+        navigation.navigate('GerenciarInformacoes'); // <--- Nome da rota da sua tela de gerenciamento
+    }, [navigation]);
 
 
     const renderChipContent = () => {
@@ -337,14 +349,14 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 return (
                     <>
                         <MaterialCommunityIcons name="clock-outline" size={18} color="#FFFFFF" />
-                        <Text style={styles.chipButtonTextSent}>Solicitação Pendente</Text>
+                        <Text style={styles.chipButtonTextSent}>{t('profile.requestPending')}</Text>
                     </>
                 );
             default:
                 return (
                     <>
                         <MaterialCommunityIcons name="check" size={18} color="#121212" />
-                        <Text style={styles.chipButtonText}>Enviar Solicitação</Text>
+                        <Text style={styles.chipButtonText}>{t('profile.sendRequestButton')}</Text>
                     </>
                 );
         }
@@ -353,8 +365,8 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
     return (
         <View style={styles.rootContainer}>
-                        <LinearGradient colors={['#181917', '#020500']} style={StyleSheet.absoluteFill} />
-            
+            <LinearGradient colors={['#181917', '#020500']} style={StyleSheet.absoluteFill} />
+
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 {/* Cabeçalho com Nome e E-mail */}
                 <View style={styles.header}>
@@ -382,13 +394,13 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                             <View style={styles.modalIconContainer}>
                                 <MaterialCommunityIcons name="account-key" size={32} color="#AEF359" />
                             </View>
-                            <Text style={styles.modalTitle}>Código de Verificação</Text>
+                            <Text style={styles.modalTitle}>{t('profile.modalVerificationCodeTitle')}</Text>
                             <Text style={styles.modalCode}>{shareCode}</Text>
                             <TouchableOpacity
                                 style={styles.modalButtonGreen}
                                 onPress={() => setIsShareCodeVisible(false)}
                             >
-                                <Text style={styles.modalButtonTextGreen}>Voltar</Text>
+                                <Text style={styles.modalButtonTextGreen}>{t('profile.modalBackButton')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -412,8 +424,8 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                             />
                         </Animated.View>
                         <View style={styles.textContainer}>
-                            <Text style={styles.rowTitle}>Notificação</Text>
-                            <Text style={styles.rowSubtitle}>Lembrete para não perder sequência</Text>
+                            <Text style={styles.rowTitle}>{t('profile.notificationTitle')}</Text>
+                            <Text style={styles.rowSubtitle}>{t('profile.notificationSubtitle')}</Text>
                         </View>
                         <Switch
                             trackColor={{ false: '#767577', true: '#2E7D32' }}
@@ -425,11 +437,12 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
                     <View style={styles.divider} />
 
-                    <TouchableOpacity style={styles.menuRow}>
+                    {/* Botão Gerenciar Informações com onPress */}
+                    <TouchableOpacity style={styles.menuRow} onPress={handleManageInfo}>
                         <MaterialCommunityIcons name="cog-outline" size={24} color="#E0E0E0" />
                         <View style={styles.textContainer}>
-                            <Text style={styles.rowTitle}>Gerenciar Informações</Text>
-                            <Text style={styles.rowSubtitle}>Atualize seu dados pessoais</Text>
+                            <Text style={styles.rowTitle}>{t('profile.manageInfoTitle')}</Text>
+                            <Text style={styles.rowSubtitle}>{t('profile.manageInfoSubtitle')}</Text>
                         </View>
                         <MaterialCommunityIcons name="arrow-top-right" size={20} color="#E0E0E0" />
                     </TouchableOpacity>
@@ -437,8 +450,8 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                     <TouchableOpacity style={styles.menuRow} onPress={handleLogout}>
                         <MaterialCommunityIcons name="logout" size={24} color="#E0E0E0" />
                         <View style={styles.textContainer}>
-                            <Text style={styles.rowTitle}>Sair da Conta</Text>
-                            <Text style={styles.rowSubtitle}>Desconectar-se do aplicativo</Text>
+                            <Text style={styles.rowTitle}>{t('profile.logoutTitle')}</Text>
+                            <Text style={styles.rowSubtitle}>{t('profile.logoutSubtitle')}</Text>
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -452,13 +465,13 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                             <ActivityIndicator size="large" color="#AEF359" />
                         ) : (
                             <>
-                    
+
                                 <MaterialCommunityIcons name="file-document-outline" size={48} color="#E0E0E0" />
-                                <Text style={styles.requestCardText}>Gere um código de partilha para o nutricionista</Text>
+                                <Text style={styles.requestCardText}>{t('profile.shareCodePrompt')}</Text>
 
                                 {/* Ambos os botões: Gerar Código e Enviar Solicitação */}
                                 <TouchableOpacity style={styles.shareButton} onPress={fetchShareCode}>
-                                    <Text style={styles.shareButtonText}>Gerar Código</Text>
+                                    <Text style={styles.shareButtonText}>{t('profile.generateCodeButton')}</Text>
                                 </TouchableOpacity>
                             </>
                         )}
@@ -476,7 +489,7 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 </Animated.View>
             )}
 
-            
+
         </View>
     );
 };
@@ -486,7 +499,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#020500',
     },
-    container: {
+    container: { // Este estilo não está sendo usado no <View> principal, mas mantido.
         flex: 1,
         paddingHorizontal: 24,
     },
@@ -494,7 +507,7 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         paddingHorizontal: 24,
         position: 'relative',
-        paddingBottom: 120,
+        paddingBottom: 120, // Garante espaço para a navbar inferior se ela for implementada globalmente
     },
     header: {
         marginTop: 60,
@@ -510,7 +523,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
-    title: {
+    title: { // Este estilo não está sendo usado no JSX, pode ser removido.
         marginBottom: 20,
         width: '100%',
         alignItems: 'flex-start',
@@ -578,18 +591,18 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 40,
     },
-    sectionTitle: {
+    sectionTitle: { // Não usado no JSX, pode ser removido.
         color: '#FFFFFF',
         fontSize: 24,
         fontWeight: 'bold',
     },
-    sectionSubtitle: {
+    sectionSubtitle: { // Não usado no JSX, pode ser removido.
         color: '#9E9E9E',
         fontSize: 16,
         marginTop: 4,
         marginBottom: 20,
     },
-    requestCard: {
+    requestCard: { // Não usado no JSX, pode ser removido.
         backgroundColor: '#181917',
         borderRadius: 40,
         padding: 30,
@@ -603,7 +616,7 @@ const styles = StyleSheet.create({
         marginTop: 15,
         marginBottom: 25,
     },
-    chipButton: {
+    chipButton: { // Não usado no JSX, pode ser removido.
         flexDirection: 'row',
         backgroundColor: '#AEF359',
         alignSelf: 'center',
@@ -615,16 +628,16 @@ const styles = StyleSheet.create({
         minHeight: 48,
         marginTop: 15,
     },
-    chipButtonText: {
+    chipButtonText: { // Não usado no JSX, pode ser removido.
         color: '#121212',
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 8,
     },
-    chipButtonSent: {
+    chipButtonSent: { // Não usado no JSX, pode ser removido.
         backgroundColor: '#333333',
     },
-    chipButtonTextSent: {
+    chipButtonTextSent: { // Não usado no JSX, pode ser removido.
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',

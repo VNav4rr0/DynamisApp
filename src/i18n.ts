@@ -38,4 +38,4 @@ if (!i18n.isInitialized) { // Adiciona esta verificação
   console.warn("i18n já está inicializado. Pulando init redundante."); // Log para depuração
 }
 
-export default i18n;
+export default i18n; 
