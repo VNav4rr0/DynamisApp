@@ -4,38 +4,34 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 
-// Importe seus arquivos JSON de tradução
+// Agora podemos usar 'import' com segurança, pois configuramos o TypeScript
 import ptTranslations from './locales/pt.json';
 import enTranslations from './locales/en.json';
 
-// Verifique se i18n já está inicializado antes de tentar inicializar novamente
-if (!i18n.isInitialized) { // Adiciona esta verificação
-  const resources = {
-    pt: ptTranslations,
-    en: enTranslations,
-  };
+const resources = {
+  pt: ptTranslations,
+  en: enTranslations,
+};
 
-  i18n
-    .use(initReactI18next)
-    .init({
-      debug: true,
-      compatibilityJSON: 'v4', // Ou 'v3' se o erro do pluralizer incomodar muito
-      resources,
+i18n
+  .use(initReactI18next)
+  .init({
+    // Propriedades de configuração que já confirmamos
+    debug: true,
+    compatibilityJSON: 'v4', 
+    resources, // Nossas traduções importadas
 
-      lng: Localization.getLocales()?.[0]?.languageCode ?? 'pt',
-      fallbackLng: 'pt',
+    // Lógica segura para detecção de idioma
+    lng: Localization.getLocales()?.[0]?.languageCode ?? 'pt',
+    fallbackLng: 'pt',
+    
+    // Configurações padrão para React
+    interpolation: {
+      escapeValue: false, 
+    },
+    react: {
+      useSuspense: false,
+    },
+  });
 
-      interpolation: {
-        escapeValue: false,
-      },
-      react: {
-        useSuspense: false,
-      },
-      ns: ['translation'], // Namespaces que você está usando
-      defaultNS: 'translation',
-    });
-} else {
-  console.warn("i18n já está inicializado. Pulando init redundante."); // Log para depuração
-}
-
-export default i18n; 
+export default i18n;

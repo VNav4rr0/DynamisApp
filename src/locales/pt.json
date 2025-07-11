@@ -173,7 +173,7 @@
       "snackbarLogoutSuccess": "Você foi desconectado com sucesso!",
       "snackbarLogoutError": "Não foi possível sair da conta. Tente novamente.",
       "modalVerificationCodeTitle": "Código de Verificação",
-      "modalBackButton": "Voltar"
+      "modalBackButton": "Voltar" 
     }
   }
 }
