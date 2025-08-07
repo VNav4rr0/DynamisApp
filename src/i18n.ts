@@ -1,37 +1,30 @@
 // src/i18n.ts
-
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 
-// Agora podemos usar 'import' com segurança, pois configuramos o TypeScript
-import ptTranslations from './locales/pt.json';
-import enTranslations from './locales/en.json';
-
 const resources = {
-  pt: ptTranslations,
-  en: enTranslations,
+  pt: {
+    // CORREÇÃO AQUI
+    translation: require('../src/locales/pt.json'),
+  },
+  en: {
+    // CORREÇÃO AQUI
+    translation: require('../src/locales/en.json'),
+  },
 };
 
 i18n
   .use(initReactI18next)
   .init({
-    // Propriedades de configuração que já confirmamos
-    debug: true,
-    compatibilityJSON: 'v4', 
-    resources, // Nossas traduções importadas
-
-    // Lógica segura para detecção de idioma
-    lng: Localization.getLocales()?.[0]?.languageCode ?? 'pt',
+    compatibilityJSON: 'v3',
+    resources,
+    lng: Localization.getLocales()[0]?.languageCode || 'pt',
     fallbackLng: 'pt',
-    
-    // Configurações padrão para React
     interpolation: {
-      escapeValue: false, 
+      escapeValue: false,
     },
-    react: {
-      useSuspense: false,
-    },
+    // Remova o debug se não for mais necessário
   });
 
-export default i18n;
+export default i18n; // <--- EXPORTAÇÃO DEFAULT AQUI!
