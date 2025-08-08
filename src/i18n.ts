@@ -6,10 +6,10 @@ import * as Localization from 'expo-localization';
 // Recursos de tradução
 const resources = {
   pt: {
-    translation: require('./assets/i18n/pt.json'),
+    translation: require('./locales/pt.json'),
   },
   en: {
-    translation: require('./assets/i18n/en.json'),
+    translation: require('./locales/en.json'),
   },
 };
 
