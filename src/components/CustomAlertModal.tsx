@@ -1,42 +1,20 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { Icon } from 'react-native-paper';
+import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
-// Interface das props (sem alterações)
 interface CustomAlertModalProps {
   isVisible: boolean;
   title: string;
   message: string;
   onClose: () => void;
-  type: 'success' | 'error' | 'info'; // Added 'info' to the type
+  type: 'success' | 'error';
 }
 
-// CORREÇÃO: Removido o tipo de retorno explícito.
-// Deixamos o TypeScript inferir o tipo, o que resolve o conflito.
-const CustomAlertModal = ({
-  isVisible,
-  title,
-  message,
-  onClose,
-  type = 'info',
-}: CustomAlertModalProps) => { // O tipo de retorno foi removido daqui
-  const { t } = useTranslation();
-
-  const getIconAndColor = (): { iconName: React.ComponentProps<typeof Ionicons>['name'], color: string } => {
-    switch (type) {
-      case 'success':
-        return { iconName: 'checkmark-circle-outline', color: '#82CD32' };
-      case 'error':
-        return { iconName: 'close-circle-outline', color: '#FF6347' };
-      case 'info':
-      default:
-        return { iconName: 'information-circle-outline', color: '#E80095' };
-    }
-  };
-
-  const { iconName, color } = getIconAndColor();
+const CustomAlertModal: React.FC<CustomAlertModalProps> = ({ isVisible, title, message, onClose, type }) => {
+  const isSuccess = type === 'success';
+  const iconName = isSuccess ? 'check-circle' : 'error';
+  const iconColor = isSuccess ? '#AEF359' : '#C62828';
+  const borderColor = isSuccess ? '#2E7D32' : '#FF6347';
 
   return (
     <Modal
@@ -46,22 +24,21 @@ const CustomAlertModal = ({
       onRequestClose={onClose}
     >
       <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Ionicons name={iconName} size={60} color={color} style={styles.icon} />
-          <Text style={styles.modalTitle}>{title}</Text>
-          <Text style={styles.modalMessage}>{message}</Text>
+        <View style={[styles.modalView, { borderColor: borderColor }]}>
+          <MaterialIcons name={iconName} size={48} color={iconColor} style={styles.icon} />
+          <Text style={styles.titleText}>{title}</Text>
+          <Text style={styles.messageText}>{message}</Text>
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: color }]}
+            style={styles.buttonClose}
             onPress={onClose}
           >
-            <Text style={styles.buttonText}>{t('cadastro.alertButtonUnderstand')}</Text>
+            <Text style={styles.textStyle}>OK</Text>
           </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
 };
-
 
 const styles = StyleSheet.create({
   centeredView: {
@@ -72,7 +49,7 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#1C1C1E',
     borderRadius: 20,
     padding: 35,
     alignItems: 'center',
@@ -85,36 +62,34 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     width: '80%',
+    borderWidth: 2,
   },
   icon: {
     marginBottom: 15,
   },
-  modalTitle: {
-    marginBottom: 15,
+  titleText: {
+    marginBottom: 10,
     textAlign: 'center',
     fontSize: 22,
-    fontFamily: 'Fustat-Bold',
+    fontWeight: 'bold',
     color: '#FFFFFF',
   },
-  modalMessage: {
+  messageText: {
     marginBottom: 20,
     textAlign: 'center',
     fontSize: 16,
-    fontFamily: 'Fustat-Regular',
-    color: '#ccc',
-    lineHeight: 22,
+    color: '#E0E0E0',
   },
-  button: {
+  buttonClose: {
+    backgroundColor: '#AEF359',
     borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    padding: 12,
     elevation: 2,
     width: '100%',
-    marginTop: 10,
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontFamily: 'Fustat-Bold',
+  textStyle: {
+    color: '#000000',
+    fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 16,
   },

@@ -1,4 +1,4 @@
-// ProfileScreenFinal.tsx
+// src/screens/PerfilScreen.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
@@ -10,7 +10,8 @@ import {
     ActivityIndicator,
     Animated,
     Dimensions,
-    Modal
+    Modal,
+    StatusBar
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -19,22 +20,50 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { auth, db } from '../../firebaseConfig/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useTranslation } from 'react-i18next'; // Importar useTranslation
+import { useTranslation } from 'react-i18next';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { CompositeScreenProps } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 // Tipagem para a navegação
-type RootTabParamList = {
+type MainTabParamList = {
     HomeTab: undefined;
     ProgressoDetalhadoTab: undefined;
     PerfilTab: undefined;
-    BoasVindasScreen: undefined;
-    ManageInfoScreen: undefined; // Adicione a tipagem para a nova tela aqui
-    GerenciarInformacoes: undefined; // Certifique-se de que esta rota está definida no seu navegador
-    // ... outras rotas que seu StackNavigator possa ter
+};
+type AppStackParamList = {
+    MainTabs: undefined;
+    GerenciarInformacoes: undefined;
+};
+type AuthStackParamList = {
+    BoasVindas: undefined;
 };
 
-type ProfileScreenProps = BottomTabScreenProps<RootTabParamList, 'PerfilTab'>;
+// Use CompositeScreenProps para o PerfilScreen
+type PerfilScreenProps = CompositeScreenProps<
+    BottomTabScreenProps<MainTabParamList, 'PerfilTab'>,
+    NativeStackScreenProps<AppStackParamList & AuthStackParamList>
+>;
+
+// Adicione as novas interfaces para os dados do nutricionista
+interface ClientMealPlan {
+    [day: string]: {
+        [meal: string]: string;
+    };
+}
+interface ClientImportantNotes {
+    notes: string;
+}
+
+const refeicoes: { nome: string; icone: string }[] = [
+    { nome: 'Café da Manhã', icone: 'coffee-outline' },
+    { nome: 'Almoço', icone: 'silverware-fork-knife' },
+    { nome: 'Café da Tarde', icone: 'coffee-outline' },
+    { nome: 'Jantar', icone: 'silverware-fork-knife' },
+    { nome: 'Ceia', icone: 'food-apple' },
+];
+const daysOfWeek = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 const mockBackendApi = {
     updateNotificationPreference: async (userId: string, isEnabled: boolean) => {
@@ -76,10 +105,9 @@ const mockBackendApi = {
     }
 };
 
-
-const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
-    const navigation = useNavigation();
-    const { t } = useTranslation(); // Use o hook useTranslation
+const PerfilScreen: React.FC<PerfilScreenProps> = () => {
+    const navigation = useNavigation<PerfilScreenProps['navigation']>();
+    const { t } = useTranslation();
 
     const [userName, setUserName] = useState(t('profile.loading'));
     const [userEmail, setUserEmail] = useState(t('profile.loading'));
@@ -97,6 +125,11 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
 
     const [isShareCodeVisible, setIsShareCodeVisible] = useState(false);
     const [shareCode, setShareCode] = useState('');
+    const [nutricionistaVinculado, setNutricionistaVinculado] = useState(false); // NOVO ESTADO: se tem nutricionista
+
+    // NOVOS ESTADOS PARA EXIBIÇÃO DO PLANO/AVISOS DO NUTRICIONISTA
+    const [planoDeRefeicao, setPlanoDeRefeicao] = useState<ClientMealPlan | null>(null);
+    const [avisosNutricionista, setAvisosNutricionista] = useState<string | null>(null);
 
     const isFocused = useIsFocused();
 
@@ -108,15 +141,56 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
 
     const fetchShareCode = useCallback(async () => {
         const user = auth.currentUser;
-        console.log("fetchShareCode: Iniciando busca do código de partilha.");
-
         if (!user) {
             showSnackbar(t('profile.snackbarGenerateCodeLoggedOut'), 'error');
-            console.error("fetchShareCode: Usuário não logado.");
             return;
         }
+        try {
+            const userDocRef = doc(db as any, "usuarios", user.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                if (userData.codigoPartilha) {
+                    setShareCode(userData.codigoPartilha);
+                    setIsShareCodeVisible(true);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                } else {
+                    showSnackbar(t('profile.shareCodeNotFound'), 'error');
+                }
+            } else {
+                showSnackbar(t('profile.userDataNotFound'), 'error');
+            }
+        } catch (error) {
+            console.error("fetchShareCode: Erro ao buscar código de partilha:", error);
+            showSnackbar(t('profile.snackbarShareCodeError'), 'error');
+        }
+    }, [showSnackbar, t]);
 
-        console.log("fetchShareCode: UID do usuário logado:", user.uid);
+    const [currentAuthUserUid, setCurrentAuthUserUid] = useState<string | null>(null);
+    const [isAuthInitializing, setIsAuthInitializing] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(user => {
+            const newUid = user ? user.uid : null;
+            setCurrentAuthUserUid(newUid);
+            if (isAuthInitializing) {
+                setIsAuthInitializing(false);
+            }
+        });
+        return () => {
+            unsubscribe();
+        };
+    }, [currentAuthUserUid, isAuthInitializing]);
+
+    const loadData = useCallback(async () => {
+        setIsLoadingUserData(true);
+        const user = auth.currentUser;
+        if (!user) {
+            setIsLoadingUserData(false);
+            showSnackbar(t('profile.sessionExpired'), 'error');
+            navigation.navigate('BoasVindas');
+            return;
+        }
 
         try {
             const userDocRef = doc(db as any, "usuarios", user.uid);
@@ -124,131 +198,34 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
 
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
-                console.log("fetchShareCode: Dados do usuário encontrados para código:", userData);
+                setUserName(userData.nome || '');
+                setUserEmail(userData.email || '');
+                setNotificationsEnabled(userData.notificationsEnabled ?? true);
+                setRequestStatus(userData.nutricionista?.requestStatus || 'idle');
+                // NOVO: Carregar plano de refeições e avisos
+                setPlanoDeRefeicao(userData.planosDeRefeicao || null);
+                setAvisosNutricionista(userData.avisosImportantes?.notes || null);
+                // NOVO: Verificar se o cliente tem nutricionista vinculado
+                setNutricionistaVinculado(!!userData.nutricionistaVinculadoUID);
 
-                if (userData.codigoPartilha) {
-                    console.log("fetchShareCode: Código de partilha encontrado:", userData.codigoPartilha);
-                    setShareCode(userData.codigoPartilha);
-                    setIsShareCodeVisible(true);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                } else {
-                    // Esta mensagem não estava no pt.json, adicionei
-                    showSnackbar(t('profile.shareCodeNotFound'), 'error'); // Use tradução
-                    console.error("fetchShareCode: O campo 'codigoPartilha' não existe ou está vazio no documento do usuário.", user.uid);
-                }
             } else {
                 showSnackbar(t('profile.userDataNotFound'), 'error');
-                console.error("fetchShareCode: Nenhum documento encontrado para o usuário no Firestore com UID:", user.uid);
+                navigation.navigate('BoasVindas');
             }
         } catch (error) {
-            console.error("fetchShareCode: Erro ao buscar código de partilha:", error);
-            showSnackbar(t('profile.snackbarShareCodeError'), 'error');
+            console.error("loadData: Erro ao carregar dados:", error);
+            showSnackbar(t('profile.userDataLoadError'), 'error');
+        } finally {
+            setIsLoadingUserData(false);
         }
-    }, [showSnackbar, t]); // Adicionado 't' às dependências
-
-    const [currentAuthUserUid, setCurrentAuthUserUid] = useState<string | null>(null);
-    const [isAuthInitializing, setIsAuthInitializing] = useState(true);
+    }, [showSnackbar, navigation, t]);
 
     useEffect(() => {
-        console.log("useEffect [onAuthStateChanged]: Montado. Configurando listener.");
-        const unsubscribe = auth.onAuthStateChanged(user => {
-            const newUid = user ? user.uid : null;
-            console.log(`onAuthStateChanged: Estado mudou. UID: ${newUid}, Anterior: ${currentAuthUserUid}`);
-            setCurrentAuthUserUid(newUid);
-            if (isAuthInitializing) {
-                setIsAuthInitializing(false);
-                console.log("onAuthStateChanged: Inicialização da autenticação concluída.");
-            }
-        });
-
-        return () => {
-            console.log("useEffect [onAuthStateChanged]: Desmontado. Removendo listener.");
-            unsubscribe();
-        };
-    }, [currentAuthUserUid, isAuthInitializing]);
-
-    useEffect(() => {
-        let isComponentMounted = true;
-
-        const loadData = async () => {
-            console.log("useEffect [currentAuthUserUid]: Disparado. UID:", currentAuthUserUid);
-
-            if (currentAuthUserUid === null && !isAuthInitializing) {
-                if (isComponentMounted && isFocused) {
-                    console.log("useEffect [currentAuthUserUid]: Usuário nulo (após inicialização) e focado. Redirecionando.");
-                    showSnackbar(t('profile.sessionExpired'), 'error');
-                    navigation.navigate('BoasVindasScreen');
-                } else if (!isFocused) {
-                    console.log("useEffect [currentAuthUserUid]: Usuário nulo (após inicialização) mas não focado. Não redirecionando.");
-                }
-                if (isComponentMounted) setIsLoadingUserData(false);
-                return;
-            } else if (currentAuthUserUid === null && isAuthInitializing) {
-                console.log("useEffect [currentAuthUserUid]: Autenticação inicializando. Aguardando...");
-                if (isComponentMounted) setIsLoadingUserData(true);
-                setUserName(t('profile.loading'));
-                setUserEmail(t('profile.loading'));
-                return;
-            }
-
-            if (isComponentMounted) {
-                setIsLoadingUserData(true);
-                setUserName(t('profile.loading'));
-                setUserEmail(t('profile.loading'));
-            }
-
-            try {
-                console.log("useEffect [currentAuthUserUid]: Carregando dados do Firestore para UID:", currentAuthUserUid);
-                if (!currentAuthUserUid) {
-                    throw new Error("UID do usuário é nulo.");
-                }
-                const userDocRef = doc(db as any, "usuarios", currentAuthUserUid);
-                const userDocSnap = await getDoc(userDocRef);
-
-                if (isComponentMounted) {
-                    if (userDocSnap.exists()) {
-                        const userData = userDocSnap.data();
-                        setUserName(userData.nome || '');
-                        setUserEmail(userData.email || '');
-                        setNotificationsEnabled(userData.notificationsEnabled ?? true);
-                        setRequestStatus(userData.nutricionista?.requestStatus || 'idle');
-                        console.log("useEffect [currentAuthUserUid]: Dados do usuário carregados com sucesso:", userData.nome);
-                    } else {
-                        console.log("useEffect [currentAuthUserUid]: Documento do usuário não encontrado no Firestore. UID:", currentAuthUserUid);
-                        showSnackbar(t('profile.userDataNotFound'), 'error');
-                        if (isComponentMounted && isFocused) {
-                            navigation.navigate('BoasVindasScreen');
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("useEffect [currentAuthUserUid]: Erro ao carregar dados do usuário do Firestore:", error);
-                if (isComponentMounted) {
-                    showSnackbar(t('profile.userDataLoadError'), 'error');
-                    setUserName(t('profile.userDataLoadError'));
-                    setUserEmail(t('profile.userDataLoadError'));
-                }
-            } finally {
-                if (isComponentMounted) {
-                    setIsLoadingUserData(false);
-                    console.log("useEffect [currentAuthUserUid]: Carregamento de dados finalizado. isLoadingUserData:", false);
-                }
-            }
-        };
-
-        if (isFocused) {
-            console.log("useEffect [currentAuthUserUid]: Tela focada. Iniciando loadData.");
+        if (isFocused && auth.currentUser) {
             loadData();
-        } else {
-            console.log("useEffect [currentAuthUserUid]: Tela não focada. Não carregando dados ainda.");
         }
+    }, [isFocused, loadData]);
 
-        return () => {
-            isComponentMounted = false;
-        };
-    }, [currentAuthUserUid, navigation, showSnackbar, isFocused, isAuthInitializing, t]); // Adicione 't' aqui
-
-    // Efeito para o Snackbar
     useEffect(() => {
         if (isSnackbarVisible) {
             Animated.timing(snackbarAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
@@ -257,9 +234,8 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
             }, 3000);
             return () => clearTimeout(timer);
         }
-    }, [isSnackbarVisible, snackbarAnim]);
+    }, [isSnackbarVisible]);
 
-    // Efeito para a animação do sino
     useEffect(() => {
         if (playBellAnimation) {
             Animated.sequence([
@@ -278,19 +254,13 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             return;
         }
-
         const newState = !notificationsEnabled;
         setNotificationsEnabled(newState);
-        if (newState) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setPlayBellAnimation(true);
-        }
-
+        if (newState) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); setPlayBellAnimation(true); }
         try {
             await mockBackendApi.updateNotificationPreference(user.uid, newState);
             showSnackbar(t('profile.snackbarNotificationSuccess'), 'success');
         } catch (error) {
-            console.error("Erro ao salvar preferência de notificação no Firestore:", error);
             setNotificationsEnabled(!newState);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             showSnackbar(t('profile.snackbarNotificationError'), 'error');
@@ -307,14 +277,12 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
         }
         if (requestStatus !== 'idle') return;
         setRequestStatus('loading');
-
         try {
             await mockBackendApi.sendNutritionistRequest(user.uid);
             setRequestStatus('sent');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             showSnackbar(t('profile.snackbarRequestSuccess'), 'success');
         } catch (error) {
-            console.error("Erro ao enviar solicitação ao nutricionista para o Firestore:", error);
             setRequestStatus('idle');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             showSnackbar(t('profile.snackbarRequestError'), 'error');
@@ -326,51 +294,36 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
             await mockBackendApi.logoutUser();
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             showSnackbar(t('profile.snackbarLogoutSuccess'), 'success');
-            navigation.navigate('BoasVindasScreen');
+            navigation.navigate('BoasVindas');
         } catch (error) {
-            console.error("Erro ao fazer logout:", error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             showSnackbar(t('profile.snackbarLogoutError'), 'error');
         }
     }, [navigation, showSnackbar, t]);
 
-    // NOVA FUNÇÃO: handleManageInfo para navegar
     const handleManageInfo = useCallback(() => {
-        console.log('Navegando para a tela de Gerenciar Informações');
-        navigation.navigate('GerenciarInformacoes'); // <--- Nome da rota da sua tela de gerenciamento
+        navigation.navigate('GerenciarInformacoes');
     }, [navigation]);
-
 
     const renderChipContent = () => {
         switch (requestStatus) {
-            case 'loading':
-                return <ActivityIndicator size="small" color="#121212" />;
-            case 'sent':
-                return (
-                    <>
-                        <MaterialCommunityIcons name="clock-outline" size={18} color="#FFFFFF" />
-                        <Text style={styles.chipButtonTextSent}>{t('profile.requestPending')}</Text>
-                    </>
-                );
-            default:
-                return (
-                    <>
-                        <MaterialCommunityIcons name="check" size={18} color="#121212" />
-                        <Text style={styles.chipButtonText}>{t('profile.sendRequestButton')}</Text>
-                    </>
-                );
+            case 'loading': return <ActivityIndicator size="small" color="#121212" />;
+            case 'sent': return (<><MaterialCommunityIcons name="clock-outline" size={18} color="#FFFFFF" /><Text style={styles.chipButtonTextSent}>{t('profile.requestPending')}</Text></>);
+            default: return (<><MaterialCommunityIcons name="check" size={18} color="#121212" /><Text style={styles.chipButtonText}>{t('profile.sendRequestButton')}</Text></>);
         }
     };
+
+    const diaDaSemanaAtual = daysOfWeek[new Date().getDay()];
+    const planoDoDia = planoDeRefeicao?.[diaDaSemanaAtual] || {};
+    const hasPlanoDoDia = Object.keys(planoDoDia).length > 0;
 
 
     return (
         <View style={styles.rootContainer}>
             <LinearGradient colors={['#181917', '#020500']} style={StyleSheet.absoluteFill} />
-
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Cabeçalho com Nome e E-mail */}
                 <View style={styles.header}>
-                    {isAuthInitializing || isLoadingUserData ? (
+                    {isLoadingUserData ? (
                         <ActivityIndicator size="large" color="#AEF359" />
                     ) : (
                         <>
@@ -385,9 +338,7 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
                     animationType="fade"
                     transparent={true}
                     visible={isShareCodeVisible}
-                    onRequestClose={() => {
-                        setIsShareCodeVisible(false);
-                    }}
+                    onRequestClose={() => { setIsShareCodeVisible(false); }}
                 >
                     <View style={styles.centeredView}>
                         <View style={styles.modalView}>
@@ -406,38 +357,20 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
                     </View>
                 </Modal>
 
-                {/* Opções da Conta */}
                 <View style={styles.card}>
                     <View style={styles.notificationRow}>
-                        <Animated.View style={{
-                            transform: [{
-                                rotate: bellRotateAnim.interpolate({
-                                    inputRange: [-1, 1],
-                                    outputRange: ['-15deg', '15deg']
-                                })
-                            }]
-                        }}>
-                            <MaterialCommunityIcons
-                                name={notificationsEnabled ? "bell" : "bell-outline"}
-                                size={24}
-                                color={notificationsEnabled ? "#AEF359" : "#E0E0E0"}
-                            />
+                        <Animated.View style={{ transform: [{ rotate: bellRotateAnim.interpolate({ inputRange: [-1, 1], outputRange: ['-15deg', '15deg'] }) }] }}>
+                            <MaterialCommunityIcons name={notificationsEnabled ? "bell" : "bell-outline"} size={24} color={notificationsEnabled ? "#AEF359" : "#E0E0E0"}/>
                         </Animated.View>
                         <View style={styles.textContainer}>
                             <Text style={styles.rowTitle}>{t('profile.notificationTitle')}</Text>
                             <Text style={styles.rowSubtitle}>{t('profile.notificationSubtitle')}</Text>
                         </View>
-                        <Switch
-                            trackColor={{ false: '#767577', true: '#2E7D32' }}
-                            thumbColor={notificationsEnabled ? '#AEF359' : '#f4f3f4'}
-                            onValueChange={toggleSwitch}
-                            value={notificationsEnabled}
-                        />
+                        <Switch trackColor={{ false: '#767577', true: '#2E7D32' }} thumbColor={notificationsEnabled ? '#AEF359' : '#f4f3f4'} onValueChange={toggleSwitch} value={notificationsEnabled} />
                     </View>
 
                     <View style={styles.divider} />
 
-                    {/* Botão Gerenciar Informações com onPress */}
                     <TouchableOpacity style={styles.menuRow} onPress={handleManageInfo}>
                         <MaterialCommunityIcons name="cog-outline" size={24} color="#E0E0E0" />
                         <View style={styles.textContainer}>
@@ -456,26 +389,58 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
                     </TouchableOpacity>
                 </View>
 
-
                 {/* Seção Nutricionista */}
                 <View style={styles.nutritionistSection}>
-
-                    <View style={styles.textCard}>
-                        {isAuthInitializing || isLoadingUserData ? (
-                            <ActivityIndicator size="large" color="#AEF359" />
-                        ) : (
-                            <>
-
-                                <MaterialCommunityIcons name="file-document-outline" size={48} color="#E0E0E0" />
-                                <Text style={styles.requestCardText}>{t('profile.shareCodePrompt')}</Text>
-
-                                {/* Ambos os botões: Gerar Código e Enviar Solicitação */}
-                                <TouchableOpacity style={styles.shareButton} onPress={fetchShareCode}>
-                                    <Text style={styles.shareButtonText}>{t('profile.generateCodeButton')}</Text>
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
+                    {/* NOVO: Renderização condicional para o botão Gerar Código */}
+                    {!nutricionistaVinculado ? (
+                        <View style={styles.textCard}>
+                            {isLoadingUserData ? (
+                                <ActivityIndicator size="large" color="#AEF359" />
+                            ) : (
+                                <>
+                                    <MaterialCommunityIcons name="file-document-outline" size={48} color="#E0E0E0" />
+                                    <Text style={styles.requestCardText}>{t('profile.shareCodePrompt')}</Text>
+                                    <TouchableOpacity style={styles.shareButton} onPress={fetchShareCode}>
+                                        <Text style={styles.shareButtonText}>{t('profile.generateCodeButton')}</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                    ) : (
+                        // NOVO: Exibir plano de refeições e avisos se o cliente tiver um nutricionista
+                        <>
+                            <View style={styles.nutritionistContent}>
+                                <Text style={styles.sectionTitle}>Plano de Refeições</Text>
+                                <Text style={styles.sectionSubtitle}>Plano atual para {diaDaSemanaAtual}</Text>
+                                
+                                {hasPlanoDoDia ? (
+                                    refeicoes.map((ref, index) => (
+                                        <View key={index} style={styles.mealItem}>
+                                            <MaterialCommunityIcons name={ref.icone} size={20} color="#AEF359" />
+                                            <View style={styles.mealTextContainer}>
+                                                <Text style={styles.mealTitle}>{ref.nome}</Text>
+                                                <Text style={styles.mealDescription}>{planoDoDia[ref.nome]}</Text>
+                                            </View>
+                                        </View>
+                                    ))
+                                ) : (
+                                    <View style={styles.noPlanContainer}>
+                                        <Text style={styles.noPlanText}>Nenhum plano de refeição definido para hoje.</Text>
+                                    </View>
+                                )}
+                            </View>
+                            
+                            {avisosNutricionista && (
+                                <View style={styles.avisosContainer}>
+                                    <View style={styles.importantHeader}>
+                                        <MaterialCommunityIcons name="alert-circle" size={20} color="#AEF359" style={{ marginRight: 6 }} />
+                                        <Text style={styles.importantTitle}>{t('profile.importantTitle')}</Text>
+                                    </View>
+                                    <Text style={styles.avisosText}>{avisosNutricionista}</Text>
+                                </View>
+                            )}
+                        </>
+                    )}
                 </View>
             </ScrollView>
 
@@ -488,26 +453,20 @@ const ProfileScreenFinal: React.FC<ProfileScreenProps> = () => {
                     <Text style={styles.snackbarText}>{snackbarMessage}</Text>
                 </Animated.View>
             )}
-
-
         </View>
     );
 };
 
-const styles = StyleSheet.create({ 
+const styles = StyleSheet.create({
     rootContainer: {
         flex: 1,
         backgroundColor: '#020500',
-    },
-    container: { // Este estilo não está sendo usado no <View> principal, mas mantido.
-        flex: 1,
-        paddingHorizontal: 24,
     },
     scrollContent: {
         flexGrow: 1,
         paddingHorizontal: 24,
         position: 'relative',
-        paddingBottom: 120, // Garante espaço para a navbar inferior se ela for implementada globalmente
+        paddingBottom: 120,
     },
     header: {
         marginTop: 60,
@@ -522,11 +481,6 @@ const styles = StyleSheet.create({
         padding: 24,
         alignItems: 'center',
         marginBottom: 16,
-    },
-    title: { // Este estilo não está sendo usado no JSX, pode ser removido.
-        marginBottom: 20,
-        width: '100%',
-        alignItems: 'flex-start',
     },
     headerName: {
         color: '#FFFFFF',
@@ -591,57 +545,83 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 40,
     },
-    sectionTitle: { // Não usado no JSX, pode ser removido.
+    sectionTitle: {
         color: '#FFFFFF',
         fontSize: 24,
         fontWeight: 'bold',
+        marginBottom: 7,
     },
-    sectionSubtitle: { // Não usado no JSX, pode ser removido.
+    sectionSubtitle: {
         color: '#9E9E9E',
         fontSize: 16,
         marginTop: 4,
         marginBottom: 20,
     },
-    requestCard: { // Não usado no JSX, pode ser removido.
+    nutritionistContent: {
+        // Estilo para o container do plano de refeições/avisos
         backgroundColor: '#181917',
-        borderRadius: 40,
-        padding: 30,
-        alignItems: 'center',
+        borderRadius: 24,
+        padding: 20,
     },
-    requestCardText: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: '500',
-        textAlign: 'center',
-        marginTop: 15,
-        marginBottom: 25,
-    },
-    chipButton: { // Não usado no JSX, pode ser removido.
+    mealItem: {
         flexDirection: 'row',
-        backgroundColor: '#AEF359',
-        alignSelf: 'center',
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 50,
-        minHeight: 48,
-        marginTop: 15,
+        marginBottom: 15,
     },
-    chipButtonText: { // Não usado no JSX, pode ser removido.
-        color: '#121212',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginLeft: 8,
+    mealTextContainer: {
+        marginLeft: 10,
     },
-    chipButtonSent: { // Não usado no JSX, pode ser removido.
-        backgroundColor: '#333333',
-    },
-    chipButtonTextSent: { // Não usado no JSX, pode ser removido.
+    mealTitle: {
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
-        marginLeft: 8,
+    },
+    mealDescription: {
+        color: '#9E9E9E',
+        fontSize: 14,
+    },
+    noPlanContainer: {
+        alignItems: 'center',
+        padding: 20,
+    },
+    noPlanText: {
+        color: '#9E9E9E',
+        textAlign: 'center',
+    },
+    avisosContainer: {
+        backgroundColor: '#1C1C1E',
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#AEF359',
+        padding: 20,
+        marginTop: 20,
+    },
+    importantHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    importantTitle: {
+        color: '#AEF359',
+        fontSize: 20,
+        fontWeight: 'bold',
+    },
+    avisosText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        lineHeight: 22,
+    },
+    shareButton: {
+        backgroundColor: '#AEF359',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 25,
+        marginTop: 10,
+    },
+    shareButtonText: {
+        color: '#000000',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     snackbarContainer: {
         position: 'absolute',
@@ -683,10 +663,7 @@ const styles = StyleSheet.create({
         padding: 35,
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 5,
         elevation: 8,
@@ -732,4 +709,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ProfileScreenFinal;
+export default PerfilScreen;

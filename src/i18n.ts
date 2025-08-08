@@ -3,14 +3,13 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 
+// Recursos de tradução
 const resources = {
   pt: {
-    // CORREÇÃO AQUI
-    translation: require('../src/locales/pt.json'),
+    translation: require('./assets/i18n/pt.json'),
   },
   en: {
-    // CORREÇÃO AQUI
-    translation: require('../src/locales/en.json'),
+    translation: require('./assets/i18n/en.json'),
   },
 };
 
@@ -21,10 +20,11 @@ i18n
     resources,
     lng: Localization.getLocales()[0]?.languageCode || 'pt',
     fallbackLng: 'pt',
+    ns: ['translation'],
+    defaultNS: 'translation',
     interpolation: {
       escapeValue: false,
     },
-    // Remova o debug se não for mais necessário
   });
 
-export default i18n; // <--- EXPORTAÇÃO DEFAULT AQUI!
+export default i18n;

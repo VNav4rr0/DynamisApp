@@ -1,3 +1,4 @@
+// src/screens/LoginScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
@@ -17,16 +18,14 @@ import { AuthStackParamList, AppStackParamList } from '../../App';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import CustomAlertModal from '../components/CustomAlertModal';
-
-import { auth } from '../../firebaseConfig/firebase';
-
+import { auth, db } from '../../firebaseConfig/firebase';
+import { doc, getDoc } from 'firebase/firestore'; // Importar Firestore para validar tipo de usuário
 
 const { height: screenHeight } = Dimensions.get('window');
 
 type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-    
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -49,24 +48,41 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
 
     const handleLogin = async () => {
         if (!email.trim() || !senha.trim()) {
-            showAlert('Erro de Login', 'Por favor, preencha o e-mail e a senha.');
+            showAlert(t('login.genericLoginError'), t('cadastro.fillAllFields'));
             return;
         }
-        
+
         setIsLoading(true);
         Keyboard.dismiss();
 
         try {
-            await auth.signInWithEmailAndPassword(email, senha);
+            const userCredential = await auth.signInWithEmailAndPassword(email, senha);
+            const user = userCredential.user;
+
+            if (user) {
+                // Verificar se o usuário é nutricionista e navegar para a tela de acesso de clientes
+                const userDocRef = doc(db, "usuarios", user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    if (userData.tipoUtilizador === 'nutricionista') {
+                        navigation.navigate('NutricionistaAccess');
+                    } else {
+                        // Para clientes normais, o App.tsx já cuida da navegação
+                    }
+                }
+            }
+
         } catch (error: any) {
-            console.error("Erro no login: ", error);
+            console.error("Erro no login:", error);
             let errorMessage = t('login.genericLoginError');
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
                 errorMessage = t('login.invalidCredentials');
             } else if (error.code === 'auth/invalid-email') {
                 errorMessage = t('login.invalidEmailFormat');
             }
-            showAlert('Erro de Login', errorMessage);
+            showAlert(t('login.genericLoginError'), errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -89,13 +105,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                             style={[styles.input, emailError && styles.inputError]}
                             keyboardType="email-address"
                             value={email}
-                            onChangeText={(text: string) => {
-                                setEmail(text);
-                                setEmailError(false);
-                            }}
+                            onChangeText={(text: string) => { setEmail(text); setEmailError(false); }}
                             autoCapitalize="none"
                         />
-
                         <View style={[styles.passwordInputContainer, senhaError && styles.inputError]}>
                             <TextInput
                                 placeholder={t('login.passwordPlaceholder')}
@@ -103,10 +115,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                                 style={styles.passwordTextInput}
                                 secureTextEntry={!showPassword}
                                 value={senha}
-                                onChangeText={(text: string) => {
-                                    setSenha(text);
-                                    setSenhaError(false);
-                                }}
+                                onChangeText={(text: string) => { setSenha(text); setSenhaError(false); }}
                             />
                             <TouchableOpacity
                                 onPress={() => setShowPassword(!showPassword)}
@@ -116,7 +125,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                                 <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color="#ccc" />
                             </TouchableOpacity>
                         </View>
-
                         <TouchableOpacity
                             style={styles.forgotPasswordContainer}
                             activeOpacity={0.7}
@@ -125,7 +133,6 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                             <Text style={styles.forgotPasswordText}>{t('login.forgotPassword')}</Text>
                         </TouchableOpacity>
                     </View>
-
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity onPress={handleLogin} activeOpacity={0.8} disabled={isLoading}>
                             <View style={styles.roundedButton}>
@@ -136,24 +143,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
                                 )}
                             </View>
                         </TouchableOpacity>
-
                         <TouchableOpacity
-                            onPress={() => navigation.replace('NutricionistaAccess')} // <-- MUDANÇA CRÍTICA AQUI
+                            onPress={() => navigation.navigate('NutricionistaAccess')}
                             style={styles.codeButton}
                             activeOpacity={0.8}
                         >
                             <Text style={styles.codeButtonText}>{t('login.enterWithCode')}</Text>
                         </TouchableOpacity>
                     </View>
-
-                    {/* CustomAlertModal (para erros de login) */}
-                    <CustomAlertModal
-                        isVisible={isAlertVisible}
-                        title={alertTitle}
-                        message={alertMessage}
-                        onClose={hideAlert}
-                        type={'error'}
-                    />
+                    <CustomAlertModal isVisible={isAlertVisible} title={alertTitle} message={alertMessage} onClose={hideAlert} type={'error'} />
                 </View>
             </TouchableWithoutFeedback>
         </SafeAreaView>
@@ -320,12 +318,6 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         marginHorizontal: 2,
-    },
-    codeInputDashStyle: {
-        backgroundColor: '#222',
-        borderColor: '#555',
-        width: 25,
-        marginHorizontal: 5,
     },
     codeModalActions: {
         flexDirection: 'row',

@@ -1,120 +1,120 @@
-import React from 'react';
-import { View, Text, StyleSheet, ImageBackground, Image } from 'react-native';
+// src/screens/BoasVindasScreen.tsx
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    ImageBackground,
+    TouchableOpacity,
+    StatusBar,
+    Dimensions
+} from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { AuthStackParamList } from '../../App';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
+const { width, height } = Dimensions.get('window');
 
-import { Button } from 'react-native-paper';
-import { useTranslation, Trans } from 'react-i18next';
-import LanguageSwitcherDropdown from '../components/LanguageSwitcherDropdown';
+type BoasVindasScreenProps = NativeStackScreenProps<AuthStackParamList, 'BoasVindas'>;
 
-type BoasVindasScreenProps = NativeStackScreenProps<any, 'BoasVindas'>;
+const BoasVindasScreen: React.FC<BoasVindasScreenProps> = ({ navigation }) => {
+    const { t } = useTranslation();
 
-
-const BoasVindasScreen: React.FC<BoasVindasScreenProps> = ({ navigation }) =>{
-  const { t } = useTranslation();
-
-  return (
-    <ImageBackground source={require('../../assets/background.png')} style={styles.container}>
-      
-      <View style={styles.header}>
-        
-        
-        <LanguageSwitcherDropdown />
-      </View>
-      
-      <View style={styles.mainContent}>
-        <Image
-          source={require('../../assets/Logotipo.png')}
-          style={styles.logoIcon}
-          resizeMode="contain"
-        />
-        <Trans
-          i18nKey="welcome.title"
-          parent={Text}
-          components={{
-            highlight: <Text style={styles.titleHighlight} />,
-          }}
-          style={styles.title}
-        />
-      </View>
-
-      <View style={styles.bottomButtons}>
-        <Button
-          mode="contained"
-          onPress={() => navigation.navigate('Login')}
-          buttonColor="#6ad400"
-          textColor="#020003"
-          style={styles.buttonStyle}
-          labelStyle={styles.buttonLabel}
-        >
-          {t('welcome.loginButton')}
-        </Button>
-        
-        <Button
-          mode="contained" 
-          onPress={() => navigation.navigate('CadastroInicial')}
-          buttonColor="transparent"
-
-          textColor="#6ad400"
-          style={styles.buttonStyle}
-          labelStyle={styles.buttonLabel}
-        >
-          {t('welcome.registerButton')}
-        </Button>
-      </View>
-    </ImageBackground>
-  );
+    return (
+        <View style={styles.container}>
+            <StatusBar  />
+            <ImageBackground
+                source={require('../../assets/background_login.png')}
+                style={styles.imageBackground}
+                resizeMode="cover"
+            >
+                <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.8)']}
+                    style={styles.gradient}
+                >
+                    <View style={styles.content}>
+                        <Text style={styles.title}>
+                            {t('welcome.title')}
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.buttonLogin}
+                            onPress={() => navigation.navigate('Login')}
+                        >
+                            <Text style={styles.buttonTextLogin}>
+                                {t('welcome.loginButton')}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.buttonRegister}
+                            onPress={() => navigation.navigate('CadastroInicial')}
+                        >
+                            <Text style={styles.buttonTextRegister}>
+                                {t('welcome.registerButton')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </LinearGradient>
+            </ImageBackground>
+        </View>
+    );
 };
 
-// ✅ ESTILOS ATUALIZADOS
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    paddingTop: 72,
-    paddingBottom: 48,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    width: '100%',
-  },
-  logoIcon: { // Estilo apenas para o ícone do logo
-    width: 180,
-    height: 50,
-  },
-  mainContent: {
-    flex: 1,
-    
-  },
-  title: {
-    fontFamily: 'Fustat-ExtraBold',
-    fontSize: 38,
-    lineHeight: 44,
-    color: '#6ad400',
-
-  },
-  titleHighlight: {
-    fontFamily: 'Fustat-ExtraBold',
-    color: '#6ad400',
-  },
-  bottomButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-  },
-  buttonStyle: {
-    flex: 1,
-    borderRadius: 100,
-    borderWidth: 1.5,
-    borderColor: '#6ad400', // Borda verde para ambos, para dar um acabamento
-  },
-  buttonLabel: {
-    fontFamily: 'Fustat-Bold',
-    fontSize: 16,
-    paddingVertical: 8,
-  },
+    container: {
+        flex: 1,
+        backgroundColor: '#000',
+    },
+    imageBackground: {
+        width: '100%',
+        height: '100%',
+    },
+    gradient: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingBottom: 50,
+    },
+    content: {
+        width: '80%',
+        alignItems: 'center',
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+        textAlign: 'center',
+        marginBottom: 30,
+        fontFamily: 'Fustat-Bold',
+    },
+    buttonLogin: {
+        width: '100%',
+        paddingVertical: 15,
+        borderRadius: 30,
+        backgroundColor: '#AEF359',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    buttonTextLogin: {
+        fontSize: 18,
+        color: '#000',
+        fontWeight: 'bold',
+        fontFamily: 'Fustat-Bold',
+    },
+    buttonRegister: {
+        width: '100%',
+        paddingVertical: 15,
+        borderRadius: 30,
+        borderWidth: 1,
+        borderColor: '#AEF359',
+        alignItems: 'center',
+    },
+    buttonTextRegister: {
+        fontSize: 18,
+        color: '#AEF359',
+        fontWeight: 'bold',
+        fontFamily: 'Fustat-Bold',
+    },
 });
 
 export default BoasVindasScreen;

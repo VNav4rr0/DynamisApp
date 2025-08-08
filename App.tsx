@@ -1,4 +1,4 @@
-// App.tsx CORRIGIDO
+// App.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import './src/i18n';
 import { View, StyleSheet, ActivityIndicator, Dimensions, Text, LogBox } from 'react-native';
@@ -10,8 +10,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './firebaseConfig/firebase';
-import { AuthStackParamList, MainTabParamList, AppStackParamList } from './src/navigation/types'; // <-- IMPORTE DAQUI
-
 
 // Telas
 import BoasVindasScreen from './src/screens/BoasVindasScreen';
@@ -29,14 +27,29 @@ import NutricionistaAccessScreen from './src/screens/NutricionistaAccessScreen';
 // Componente da TabBar Customizada
 import CustomTabBar from './src/components/CustomTabBar';
 
-// Suprimir o aviso de "Text strings" (mantenha ativo por enquanto)
 LogBox.ignoreLogs(['Warning: Text strings must be rendered within a <Text> component.']);
-
 
 const { width } = Dimensions.get('window');
 
 // Tipagem
-
+export type AuthStackParamList = {
+    BoasVindas: undefined;
+    Login: undefined;
+    CadastroInicial: undefined;
+    RecuperarSenha: undefined;
+    DefinirMetas: undefined;
+    NutricionistaAccess: undefined;
+};
+export type MainTabParamList = {
+    HomeTab: undefined;
+    ProgressoDetalhadoTab: undefined;
+    PerfilTab: undefined;
+};
+export type AppStackParamList = {
+    MainTabs: undefined;
+    Nutricionista: { clientUid: string; clientName: string; }; // Corrigido para não ser | undefined, já que sempre passamos
+    GerenciarInformacoes: undefined;
+};
 
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -52,95 +65,42 @@ function MainTabNavigator() {
                 tabBarShowLabel: false,
                 tabBarLabel: () => null,
                 title: '',
+                headerTitle: () => null, 
+                headerBackTitle: '',
+                headerBackTitleVisible: false,
+                headerTintColor: 'transparent',
+                tabBarIcon: () => null,
+                tabBarButton: undefined,
             }}
             tabBar={(props) => <CustomTabBar {...props} />}
             initialRouteName="PerfilTab"
         >
-            <MainTab.Screen 
-                name="HomeTab" 
-                component={HomeScreen} 
-                options={{ 
-                    tabBarLabel: '',
-                    tabBarAccessibilityLabel: 'Home',
-                }}
-            />
-            <MainTab.Screen 
-                name="ProgressoDetalhadoTab" 
-                component={ProgressoDetalhadoScreen} 
-                options={{ 
-                    tabBarLabel: '',
-                    tabBarAccessibilityLabel: 'Progresso Detalhado',
-                }}
-            />
-            <MainTab.Screen 
-                name="PerfilTab" 
-                component={PerfilScreen} 
-                options={{ 
-                    tabBarLabel: '',
-                    tabBarAccessibilityLabel: 'Perfil',
-                }}
-            />
+            <MainTab.Screen name="HomeTab" component={HomeScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Home' }}/>
+            <MainTab.Screen name="ProgressoDetalhadoTab" component={ProgressoDetalhadoScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Progresso Detalhado' }}/>
+            <MainTab.Screen name="PerfilTab" component={PerfilScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Perfil' }}/>
         </MainTab.Navigator>
     );
 }
 
 function AuthNavigator() {
     return (
-        <AuthStack.Navigator 
-            initialRouteName="BoasVindas" 
-            screenOptions={{ 
-                headerShown: false,
-                title: '', 
-                headerTitle: () => null,
-                headerBackTitle: '',
-                headerBackTitleVisible: false,
-                headerTintColor: 'transparent',
-            }}
-        >
+        <AuthStack.Navigator initialRouteName="BoasVindas" screenOptions={{ headerShown: false, title: '', headerTitle: () => null, headerBackTitle: '', headerBackTitleVisible: false, headerTintColor: 'transparent', }}>
             <AuthStack.Screen name="BoasVindas" component={BoasVindasScreen} />
             <AuthStack.Screen name="Login" component={LoginScreen} />
             <AuthStack.Screen name="CadastroInicial" component={CadastroInicialScreen} />
             <AuthStack.Screen name="RecuperarSenha" component={RecuperarSenhaScreen} />
             <AuthStack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
             <AuthStack.Screen name="NutricionistaAccess" component={NutricionistaAccessScreen} />
-            {/* // <-- MUDANÇA 2: TELA ADICIONADA A ESTE NAVEGADOR */}
-            <AuthStack.Screen name="Nutricionista" component={NutricionistaScreen} /> 
         </AuthStack.Navigator>
     );
 }
 
 function AppFlowNavigator() {
     return (
-        <AppStackNavigator.Navigator 
-            screenOptions={{ 
-                headerShown: false, 
-                contentStyle: { backgroundColor: '#000000' },
-                title: '', 
-                headerTitle: () => null,
-                headerBackTitle: '',
-                headerBackTitleVisible: false,
-                headerTintColor: 'transparent',
-            }}
-        >
-            <AppStackNavigator.Screen 
-                name="MainTabs" 
-                component={MainTabNavigator} 
-                options={{ 
-                    title: '',
-                    headerTitle: () => null,
-                    headerBackTitle: '',
-                }}
-            />
-            {/* // <-- MUDANÇA 2: TELA REMOVIDA DESTE NAVEGADOR */}
-            <AppStackNavigator.Screen 
-                name="GerenciarInformacoes" 
-                component={GerenciarInformacoesScreen} 
-                options={{ 
-                    title: '', 
-                    headerTitle: () => null,
-                    headerBackTitle: '',
-                }}
-            />
+        <AppStackNavigator.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' }, title: '', headerTitle: () => null, headerBackTitle: '', headerBackTitleVisible: false, headerTintColor: 'transparent', }}>
+            <AppStackNavigator.Screen name="MainTabs" component={MainTabNavigator} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
+            <AppStackNavigator.Screen name="Nutricionista" component={NutricionistaScreen} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
+            <AppStackNavigator.Screen name="GerenciarInformacoes" component={GerenciarInformacoesScreen} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
         </AppStackNavigator.Navigator>
     );
 }
