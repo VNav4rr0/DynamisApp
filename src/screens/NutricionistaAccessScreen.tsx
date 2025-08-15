@@ -13,11 +13,10 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AuthStackParamList } from '../navigation/types'; // Importação correta
+import { AuthStackParamList, AppStackParamList } from '../../App'; 
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import CustomAlertModal from '../components/CustomAlertModal';
-
 
 import { collection, query, where, getDocs } from 'firebase/firestore'; 
 import { db } from '../../firebaseConfig/firebase'; 
@@ -25,8 +24,7 @@ import { db } from '../../firebaseConfig/firebase';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-// <-- MUDANÇA AQUI: Removido "& AppStackParamList" que era desnecessário e causava erro.
-type NutricionistaAccessScreenProps = NativeStackScreenProps<AuthStackParamList, 'NutricionistaAccess'>;
+type NutricionistaAccessScreenProps = NativeStackScreenProps<AuthStackParamList & AppStackParamList, 'NutricionistaAccess'>;
 
 const TOTAL_DIGITABLE_INPUTS = 8;
 const PREFIX_CHARS_LENGTH = 3; 
@@ -48,6 +46,9 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
     const [alertMessage, setAlertMessage] = useState('');
     const [alertType, setAlertType] = useState<'success' | 'error'>('error'); 
 
+    // NOVO: estado para a navegação após o modal
+    const [pendingNavigation, setPendingNavigation] = useState<{ screen: 'Nutricionista', params: { clientUid: string, clientName: string } } | null>(null);
+
     const showAlert = useCallback((title: string, message: string, type: 'success' | 'error' = 'error') => {
         setAlertTitle(title);
         setAlertMessage(message);
@@ -55,18 +56,27 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
         setIsAlertVisible(true);
     }, []);
 
-    const hideAlert = useCallback(() => setIsAlertVisible(false), []);
+    const hideAlert = () => {
+        setIsAlertVisible(false);
+        // NOVO: executa a navegação pendente após fechar o modal
+        if (pendingNavigation) {
+            navigation.navigate(pendingNavigation.screen as any, pendingNavigation.params as any);
+            setPendingNavigation(null); // Limpa a navegação pendente
+        }
+    };
 
     const handleCodeChange = (text: string, index: number) => {
         const newCodeParts = [...accessCodeParts];
-        const newText = text.toUpperCase().charAt(0);
-        newCodeParts[index] = newText;
+        newCodeParts[index] = text.toUpperCase();
         
         setAccessCodeParts(newCodeParts);
 
-        if (newText.length === 1 && index < TOTAL_DIGITABLE_INPUTS - 1) {
+        if (newCodeParts[index].length === 1 && index < TOTAL_DIGITABLE_INPUTS - 1) {
             codeInputRefs.current[index + 1]?.focus();
         } 
+        else if (newCodeParts[index].length === 0 && index > 0) {
+            codeInputRefs.current[index - 1]?.focus();
+        }
     };
 
     const handleKeyPress = useCallback(({ nativeEvent: { key } }: any, index: number) => {
@@ -77,19 +87,19 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
 
 
     const handleAccessCodeVerify = async () => {
-        const enteredChars = accessCodeParts.join(''); // Pega os 8 caracteres digitados
+        const enteredChars = accessCodeParts.join('');
         
         if (enteredChars.length !== TOTAL_DIGITABLE_INPUTS) {
             showAlert('Erro de Código', `Por favor, preencha o código completo (${TOTAL_DIGITABLE_INPUTS} caracteres).`);
             return;
         }
 
-        const prefix = enteredChars.substring(0, PREFIX_CHARS_LENGTH);
-        const suffix = enteredChars.substring(PREFIX_CHARS_LENGTH);
+        const prefix = enteredChars.substring(0, 3);
+        const suffix = enteredChars.substring(3);
         const fullShareCode = `${prefix}-${suffix}`;
 
-        if (prefix !== 'DYN' || suffix.length !== 5 || !/^[A-Z0-9]{5}$/.test(suffix)) {
-            showAlert('Erro de Código', 'Formato de código inválido. O código deve ser DYN-XXXXX (DYN seguido de 5 letras/números).');
+        if (prefix !== 'DYN' || suffix.length !== 5) {
+            showAlert('Erro de Código', 'Formato de código inválido. O código deve ser DYN-XXXXX.');
             return;
         }
         
@@ -106,13 +116,11 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                 const clientData = clientDoc.data();
                 const clientUID = clientDoc.id;
 
+                // NOVO: Definimos a navegação pendente
+                setPendingNavigation({ screen: 'Nutricionista', params: { clientUid: clientUID, clientName: clientData.nome } });
                 showAlert('Sucesso', `Cliente ${clientData.nome || 'desconhecido'} encontrado! Redirecionando.`, 'success');
+                setAccessCodeParts(Array(TOTAL_DIGITABLE_INPUTS).fill('')); // Limpa inputs
                 
-                setTimeout(() => {
-                    navigation.navigate('Nutricionista', { clientUid: clientUID, clientName: clientData.nome });
-                    setAccessCodeParts(Array(TOTAL_DIGITABLE_INPUTS).fill(''));
-                }, 1500);
-
             } else {
                 showAlert('Erro de Código', 'Código de acesso inválido ou não encontrado.');
             }
@@ -127,10 +135,7 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
             setIsLoadingAccess(false);
         }
     };
-    
-    const handleVerifiedClose = () => {
-        setAccessCodeParts(Array(TOTAL_DIGITABLE_INPUTS).fill(''));
-    };
+
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -143,6 +148,7 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                         </Text>
                     </View>
 
+                    {/* Code Inputs */}
                     <View style={styles.codeInputsRow}>
                         {Array.from({ length: TOTAL_DIGITABLE_INPUTS }).map((_, index) => (
                             <React.Fragment key={index}>
@@ -173,12 +179,13 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                         )}
                     </TouchableOpacity>
 
+                    {/* CustomAlertModal */}
                     <CustomAlertModal
                         isVisible={isAlertVisible}
                         title={alertTitle}
                         message={alertMessage}
                         onClose={hideAlert}
-                        type={alertType} // Corrigido para usar o estado dinâmico
+                        type={alertType}
                     />
                 </View>
             </TouchableWithoutFeedback>

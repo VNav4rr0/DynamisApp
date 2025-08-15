@@ -11,7 +11,8 @@ import {
     Animated,
     Dimensions,
     Modal,
-    StatusBar
+    StatusBar,
+    Alert
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -40,13 +41,11 @@ type AuthStackParamList = {
     BoasVindas: undefined;
 };
 
-// Use CompositeScreenProps para o PerfilScreen
 type PerfilScreenProps = CompositeScreenProps<
     BottomTabScreenProps<MainTabParamList, 'PerfilTab'>,
     NativeStackScreenProps<AppStackParamList & AuthStackParamList>
 >;
 
-// Adicione as novas interfaces para os dados do nutricionista
 interface ClientMealPlan {
     [day: string]: {
         [meal: string]: string;
@@ -125,11 +124,11 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
 
     const [isShareCodeVisible, setIsShareCodeVisible] = useState(false);
     const [shareCode, setShareCode] = useState('');
-    const [nutricionistaVinculado, setNutricionistaVinculado] = useState(false); // NOVO ESTADO: se tem nutricionista
+    const [nutricionistaVinculado, setNutricionistaVinculado] = useState(false);
 
-    // NOVOS ESTADOS PARA EXIBIÇÃO DO PLANO/AVISOS DO NUTRICIONISTA
     const [planoDeRefeicao, setPlanoDeRefeicao] = useState<ClientMealPlan | null>(null);
     const [avisosNutricionista, setAvisosNutricionista] = useState<string | null>(null);
+    const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay());
 
     const isFocused = useIsFocused();
 
@@ -146,7 +145,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
             return;
         }
         try {
-            const userDocRef = doc(db as any, "usuarios", user.uid);
+            const userDocRef = doc(db, "usuarios", user.uid);
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
@@ -191,21 +190,17 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
             navigation.navigate('BoasVindas');
             return;
         }
-
         try {
-            const userDocRef = doc(db as any, "usuarios", user.uid);
+            const userDocRef = doc(db, "usuarios", user.uid);
             const userDocSnap = await getDoc(userDocRef);
-
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 setUserName(userData.nome || '');
                 setUserEmail(userData.email || '');
                 setNotificationsEnabled(userData.notificationsEnabled ?? true);
                 setRequestStatus(userData.nutricionista?.requestStatus || 'idle');
-                // NOVO: Carregar plano de refeições e avisos
                 setPlanoDeRefeicao(userData.planosDeRefeicao || null);
                 setAvisosNutricionista(userData.avisosImportantes?.notes || null);
-                // NOVO: Verificar se o cliente tem nutricionista vinculado
                 setNutricionistaVinculado(!!userData.nutricionistaVinculadoUID);
 
             } else {
@@ -267,7 +262,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
         }
     }, [notificationsEnabled, showSnackbar, t]);
 
-
     const handleSendRequest = useCallback(async () => {
         const user = auth.currentUser;
         if (!user) {
@@ -317,6 +311,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
     const planoDoDia = planoDeRefeicao?.[diaDaSemanaAtual] || {};
     const hasPlanoDoDia = Object.keys(planoDoDia).length > 0;
 
+    const hasPlanoVinculado = nutricionistaVinculado && planoDeRefeicao && Object.keys(planoDeRefeicao).length > 0;
 
     return (
         <View style={styles.rootContainer}>
@@ -333,7 +328,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
                     )}
                 </View>
 
-                {/* Modal de Código de Partilha */}
                 <Modal
                     animationType="fade"
                     transparent={true}
@@ -391,53 +385,52 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
 
                 {/* Seção Nutricionista */}
                 <View style={styles.nutritionistSection}>
-                    {/* NOVO: Renderização condicional para o botão Gerar Código */}
-                    {!nutricionistaVinculado ? (
+                    {isLoadingUserData ? (
                         <View style={styles.textCard}>
-                            {isLoadingUserData ? (
-                                <ActivityIndicator size="large" color="#AEF359" />
-                            ) : (
-                                <>
+                            <ActivityIndicator size="large" color="#AEF359" />
+                        </View>
+                    ) : (
+                        <>
+                            {!hasPlanoVinculado ? (
+                                <View style={styles.textCard}>
                                     <MaterialCommunityIcons name="file-document-outline" size={48} color="#E0E0E0" />
                                     <Text style={styles.requestCardText}>{t('profile.shareCodePrompt')}</Text>
                                     <TouchableOpacity style={styles.shareButton} onPress={fetchShareCode}>
                                         <Text style={styles.shareButtonText}>{t('profile.generateCodeButton')}</Text>
                                     </TouchableOpacity>
-                                </>
-                            )}
-                        </View>
-                    ) : (
-                        // NOVO: Exibir plano de refeições e avisos se o cliente tiver um nutricionista
-                        <>
-                            <View style={styles.nutritionistContent}>
-                                <Text style={styles.sectionTitle}>Plano de Refeições</Text>
-                                <Text style={styles.sectionSubtitle}>Plano atual para {diaDaSemanaAtual}</Text>
-                                
-                                {hasPlanoDoDia ? (
-                                    refeicoes.map((ref, index) => (
-                                        <View key={index} style={styles.mealItem}>
-                                            <MaterialCommunityIcons name={ref.icone} size={20} color="#AEF359" />
-                                            <View style={styles.mealTextContainer}>
-                                                <Text style={styles.mealTitle}>{ref.nome}</Text>
-                                                <Text style={styles.mealDescription}>{planoDoDia[ref.nome]}</Text>
-                                            </View>
-                                        </View>
-                                    ))
-                                ) : (
-                                    <View style={styles.noPlanContainer}>
-                                        <Text style={styles.noPlanText}>Nenhum plano de refeição definido para hoje.</Text>
-                                    </View>
-                                )}
-                            </View>
-                            
-                            {avisosNutricionista && (
-                                <View style={styles.avisosContainer}>
-                                    <View style={styles.importantHeader}>
-                                        <MaterialCommunityIcons name="alert-circle" size={20} color="#AEF359" style={{ marginRight: 6 }} />
-                                        <Text style={styles.importantTitle}>{t('profile.importantTitle')}</Text>
-                                    </View>
-                                    <Text style={styles.avisosText}>{avisosNutricionista}</Text>
                                 </View>
+                            ) : (
+                                <>
+                                    <View style={styles.nutritionistContent}>
+                                        <Text style={styles.sectionTitle}>{t('profile.planoDeRefeicoesTitle')}</Text>
+                                        <Text style={styles.sectionSubtitle}>Plano atual para {diaDaSemanaAtual}</Text>
+                                        {hasPlanoDoDia ? (
+                                            refeicoes.map((ref, index) => (
+                                                <View key={index} style={styles.mealItem}>
+                                                    <MaterialCommunityIcons name={ref.icone as any} size={20} color="#AEF359" />
+                                                    <View style={styles.mealTextContainer}>
+                                                        <Text style={styles.mealTitle}>{ref.nome}</Text>
+                                                        <Text style={styles.mealDescription}>{planoDoDia[ref.nome] || 'Nenhum item adicionado'}</Text>
+                                                    </View>
+                                                </View>
+                                            ))
+                                        ) : (
+                                            <View style={styles.noPlanContainer}>
+                                                <Text style={styles.noPlanText}>Nenhum plano de refeição definido para hoje.</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    
+                                    {avisosNutricionista && (
+                                        <View style={styles.avisosContainer}>
+                                            <View style={styles.importantHeader}>
+                                                <MaterialCommunityIcons name="alert-circle" size={20} color="#AEF359" style={{ marginRight: 6 }} />
+                                                <Text style={styles.importantTitle}>{t('profile.importantTitle')}</Text>
+                                            </View>
+                                            <Text style={styles.avisosText}>{avisosNutricionista}</Text>
+                                        </View>
+                                    )}
+                                </>
                             )}
                         </>
                     )}
@@ -461,6 +454,25 @@ const styles = StyleSheet.create({
     rootContainer: {
         flex: 1,
         backgroundColor: '#020500',
+    },
+    chipButtonText: {
+        color: '#121212',
+        fontSize: 15,
+        fontWeight: 'bold',
+        marginLeft: 6,
+    },
+    chipButtonTextSent: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: 'bold',
+        marginLeft: 6,
+    },
+    requestCardText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        textAlign: 'center',
+        marginTop: 16,
+        marginBottom: 8,
     },
     scrollContent: {
         flexGrow: 1,
@@ -558,7 +570,6 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     nutritionistContent: {
-        // Estilo para o container do plano de refeições/avisos
         backgroundColor: '#181917',
         borderRadius: 24,
         padding: 20,
@@ -596,33 +607,12 @@ const styles = StyleSheet.create({
         padding: 20,
         marginTop: 20,
     },
-    importantHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    importantTitle: {
-        color: '#AEF359',
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
     avisosText: {
         color: '#FFFFFF',
         fontSize: 16,
         lineHeight: 22,
     },
-    shareButton: {
-        backgroundColor: '#AEF359',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 25,
-        marginTop: 10,
-    },
-    shareButtonText: {
-        color: '#000000',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    
     snackbarContainer: {
         position: 'absolute',
         bottom: 95,
@@ -707,6 +697,67 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 14,
     },
+    importantHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    importantTitle: {
+        color: '#AEF359',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginLeft: 4,
+    },
+    planoModalOverlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    },
+    planoModalContainer: {
+        backgroundColor: '#181917',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        padding: 24,
+        height: '80%',
+        width: '100%',
+    },
+    planoModalTitle: {
+        color: '#FFFFFF',
+        fontSize: 28,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    planoModalSubtitle: {
+        color: '#9E9E9E',
+        fontSize: 16,
+        marginBottom: 16,
+    },
+    closeModalButton: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 1,
+    },
+    modalScrollContent: {
+        flex: 1,
+        paddingBottom: 20,
+    },
+    planoDaySection: {
+        backgroundColor: '#1C1C1E',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+    },
+    planoDayTitle: {
+        color: '#AEF359',
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 12,
+    },
+    planoMealsContainer: {
+        paddingLeft: 8,
+    },
+   
 });
 
 export default PerfilScreen;

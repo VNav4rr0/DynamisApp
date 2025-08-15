@@ -13,18 +13,17 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { LineChart } from 'react-native-chart-kit';
-// Importações para navegação e tipagem de route.params
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format, subMonths, subYears, isAfter, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 // --- Firebase Imports ---
-import { db } from '../../firebaseConfig/firebase';
+import { auth, db } from '../../firebaseConfig/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 // --- Tipagens do App.tsx ---
-import { AppStackParamList, AuthStackParamList } from '../navigation/types';
+import { AppStackParamList, AuthStackParamList } from '../../App';
 
 const { width } = Dimensions.get('window');
 
@@ -66,18 +65,11 @@ const CHART_CONFIG = {
     formatYLabel: (yLabel: string) => parseFloat(yLabel).toFixed(1),
 };
 
-// --- INTERFACES PARA DADOS DO CLIENTE (Consistente com Firestore) ---
-interface ClientDailyLogEntry {
-    calories: number;
-    weight: number;
-    water: number;
-    timestamp: string;
-}
+interface ClientDailyLogEntry { calories: number; weight: number; water: number; timestamp: string; }
 interface ClientMetas { pesoMeta?: number; pesoAtual?: number; }
 interface ClientNutritionalGoals { metaCalorias?: number; macros?: { proteina: number; carboidratos: number; gordura: number; }; }
 interface ClientMealPlan { [day: string]: { [meal: string]: string; }; }
 interface ClientImportantNotes { notes: string; }
-
 interface ClientData {
     uid: string;
     nome: string;
@@ -91,71 +83,45 @@ interface ClientData {
     nutricionistaVinculadoUID?: string;
 }
 
-// --- Tipagem das Props da NutricionistaScreen ---
-type NutricionistaScreenRouteProp = RouteProp<AuthStackParamList, 'Nutricionista'>;
-type NutricionistaScreenNavigationProp = NativeStackScreenProps<AuthStackParamList, 'Nutricionista'>['navigation'];
-
-interface NutricionistaScreenProps {
-    route: NutricionistaScreenRouteProp;
-    navigation: NutricionistaScreenNavigationProp;
-}
+type NutricionistaScreenProps = NativeStackScreenProps<AppStackParamList & AuthStackParamList, 'Nutricionista'>;
 
 
-const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
-    const route = useRoute<NutricionistaScreenRouteProp>();
-    const navigation = useNavigation<NutricionistaScreenNavigationProp>();
-
-    // Receber clientUid e clientName dos parâmetros da rota
+const NutricionistaScreen: React.FC<NutricionistaScreenProps> = ({ route, navigation }) => { // CORRIGIDO: Recebe props diretamente
     const { clientUid, clientName } = route.params || {};
 
     const [selectedClientData, setSelectedClientData] = useState<ClientData | null>(null);
     const [isLoadingClientData, setIsLoadingClientData] = useState(true);
     const [errorClientData, setErrorClientData] = useState<string | null>(null);
-
     const [activePeriod, setActivePeriod] = useState<PeriodKey>('1m');
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-
     const [mealDescriptions, setMealDescriptions] = useState<Record<string, string>>({});
     const [importantNotes, setImportantNotes] = useState('');
     const [isLoadingSave, setIsLoadingSave] = useState(false);
 
     const daysOfWeek = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
-    // --- FUNÇÕES DE INTERAÇÃO COM O BANCO ---
     const fetchClientFullData = useCallback(async (uid: string) => {
         setIsLoadingClientData(true);
         setErrorClientData(null);
         setSelectedClientData(null);
-
         try {
             const userDocRef = doc(db, "usuarios", uid);
             const userDocSnap = await getDoc(userDocRef);
-
             if (userDocSnap.exists()) {
                 const data = { ...userDocSnap.data(), uid: userDocSnap.id } as ClientData;
                 setSelectedClientData(data);
-                console.log("NutricionistaScreen: Dados completos do cliente carregados:", data.nome, "UID:", data.uid);
-
                 const currentDayPlan = data.planosDeRefeicao?.[daysOfWeek[selectedDayIndex]] || {};
-                
                 const newMealDescriptions: Record<string, string> = {};
                 refeicoes.forEach(refeicao => {
                     newMealDescriptions[refeicao.nome] = currentDayPlan[refeicao.nome] || '';
                 });
                 setMealDescriptions(newMealDescriptions);
                 setImportantNotes(data.avisosImportantes?.notes || '');
-
             } else {
-                setErrorClientData("Dados do cliente não encontrados no banco de dados.");
-                console.log("NutricionistaScreen: Documento do cliente não encontrado para UID:", uid);
+                setErrorClientData("Dados do cliente não encontrados.");
             }
-        } catch (error: any) {
-            console.error("NutricionistaScreen: Erro ao buscar dados completos do cliente:", error);
-            if (error.code === 'permission-denied') {
-                 setErrorClientData("Erro de permissão. O nutricionista não tem acesso a este cliente.");
-            } else {
-                setErrorClientData("Erro ao carregar dados do cliente. Verifique sua conexão.");
-            }
+        } catch (error) {
+            setErrorClientData("Erro ao carregar dados do cliente.");
         } finally {
             setIsLoadingClientData(false);
         }
@@ -167,39 +133,16 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
             return;
         }
         setIsLoadingSave(true);
-        
         try {
             const clientDocRef = doc(db, "usuarios", selectedClientData.uid);
-            
             const currentDayName = daysOfWeek[selectedDayIndex];
-            const updatedMealPlan = { 
-                ...(selectedClientData.planosDeRefeicao || {}),
-                [currentDayName]: mealDescriptions
-            };
-
+            const updatedMealPlan = { ...(selectedClientData.planosDeRefeicao || {}), [currentDayName]: mealDescriptions };
             const updatedImportantNotes = { notes: importantNotes };
-
-            await updateDoc(clientDocRef, {
-                planosDeRefeicao: updatedMealPlan,
-                avisosImportantes: updatedImportantNotes,
-            });
-
-            setSelectedClientData(prev => prev ? {
-                ...prev,
-                planosDeRefeicao: updatedMealPlan,
-                avisosImportantes: updatedImportantNotes,
-            } : null);
-
+            await updateDoc(clientDocRef, { planosDeRefeicao: updatedMealPlan, avisosImportantes: updatedImportantNotes });
+            setSelectedClientData(prev => prev ? { ...prev, planosDeRefeicao: updatedMealPlan, avisosImportantes: updatedImportantNotes } : null);
             Alert.alert("Sucesso", `Plano e avisos para ${selectedClientData.nome || 'o cliente'} salvos com sucesso!`);
-            console.log("NutricionistaScreen: Dados do cliente salvos com sucesso.");
-
-        } catch (error: any) {
-            console.error("NutricionistaScreen: Erro ao salvar dados do cliente:", error);
-            if (error.code === 'permission-denied') {
-                 Alert.alert("Erro de Permissão", "Você não tem permissão para salvar este plano. Verifique as regras do Firestore.");
-            } else {
-                Alert.alert("Erro", "Não foi possível salvar os dados do cliente.");
-            }
+        } catch (error) {
+            Alert.alert("Erro", "Não foi possível salvar as alterações.");
         } finally {
             setIsLoadingSave(false);
         }
@@ -213,102 +156,56 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
             setIsLoadingClientData(false);
             setErrorClientData("Nenhum cliente selecionado. Use o código de acesso para carregar um cliente.");
         }
-    }, [clientUid, fetchClientFullData]);
+    }, [clientUid, selectedDayIndex, fetchClientFullData]);
 
     const chartData = useMemo(() => {
         if (!selectedClientData?.dailyLogs || Object.keys(selectedClientData.dailyLogs).length === 0) {
-            return {
-                labels: [],
-                datasets: [{ data: [] }],
-                chartWidth: width * 0.9,
-                isEmpty: true
-            };
+            return { labels: [], datasets: [{ data: [] }], isEmpty: true, chartWidth: width - 40 };
         }
-
         const sortedDates = Object.keys(selectedClientData.dailyLogs).sort();
-        let filteredWeights: number[] = [];
+        let dataPoints: number[] = [];
         let labels: string[] = [];
         let startDate: Date;
-
         const today = startOfDay(new Date()); 
         
         switch (activePeriod) {
-            case '1m': startDate = startOfDay(subMonths(today, 1)); break;
-            case '3m': startDate = startOfDay(subMonths(today, 3)); break;
-            case '6m': startDate = startOfDay(subMonths(today, 6)); break;
-            case '1a': startDate = startOfDay(subYears(today, 1)); break;
+            case '1m': startDate = subMonths(today, 1); break;
+            case '3m': startDate = subMonths(today, 3); break;
+            case '6m': startDate = subMonths(today, 6); break;
+            case '1a': startDate = subYears(today, 1); break;
             case 'mais': startDate = new Date(0); break;
         }
-
-        for (const dateString of sortedDates) {
-            const logDate = parseISO(dateString);
+        sortedDates.forEach(dateStr => {
+            const logDate = parseISO(dateStr);
             if (isAfter(logDate, startDate) || isSameDay(logDate, startDate)) {
-                const weightValue = selectedClientData.dailyLogs[dateString].weight;
-                if (typeof weightValue === 'number' && !isNaN(weightValue)) {
-                    filteredWeights.push(weightValue);
-                    if (activePeriod === '1m') {
-                        labels.push(format(logDate, 'dd/MM', { locale: ptBR }));
-                    } else if (activePeriod === '3m' || activePeriod === '6m') {
-                        labels.push(format(logDate, 'MMM', { locale: ptBR }));
-                    } else {
-                        labels.push(format(logDate, 'MMM/yy', { locale: ptBR }));
-                    }
+                const weight = selectedClientData.dailyLogs?.[dateStr]?.weight;
+                if (typeof weight === 'number') {
+                    dataPoints.push(weight);
+                    labels.push(format(logDate, 'dd/MM'));
                 }
             }
-        }
-
-        const datasets = [
-            {
-                data: filteredWeights,
-                color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
-                strokeWidth: 3,
-            }
-        ];
-
-        if (selectedClientData.metas?.pesoMeta !== null && typeof selectedClientData.metas?.pesoMeta === 'number' && filteredWeights.length > 0) {
-            datasets.push({
-                data: Array(filteredWeights.length).fill(selectedClientData.metas.pesoMeta),
-                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                strokeWidth: 1,
-            });
-        }
-        
-        if (filteredWeights.length === 0) {
-             return {
-                labels: [],
-                datasets: [{ data: [] }],
-                chartWidth: width * 0.9,
-                isEmpty: true
-            };
-        }
-        
-        const chartRenderWidth = Math.max(width * 0.9 - 40, labels.length * 50);
-
-        return { labels, datasets, chartWidth: chartRenderWidth, isEmpty: false };
-
+        });
+        if (dataPoints.length === 0) return { labels: [], datasets: [{ data: [] }], isEmpty: true, chartWidth: width - 40 };
+        const chartRenderWidth = Math.max(width - 40, labels.length * 50);
+        return { labels, datasets: [{ data: dataPoints }], isEmpty: false, chartWidth: chartRenderWidth };
     }, [selectedClientData, activePeriod, width]);
 
     const hasDataForPeriod = useCallback((period: PeriodKey) => {
-        if (!selectedClientData?.dailyLogs || Object.keys(selectedClientData.dailyLogs).length === 0) {
-            return false;
-        }
+        if (!selectedClientData?.dailyLogs || Object.keys(selectedClientData.dailyLogs).length === 0) return false;
         let startDate: Date;
         const today = startOfDay(new Date());
-
         switch (period) {
-            case '1m': startDate = startOfDay(subMonths(today, 1)); break;
-            case '3m': startDate = startOfDay(subMonths(today, 3)); break;
-            case '6m': startDate = startOfDay(subMonths(today, 6)); break;
-            case '1a': startDate = startOfDay(subYears(today, 1)); break;
+            case '1m': startDate = subMonths(today, 1); break;
+            case '3m': startDate = subMonths(today, 3); break;
+            case '6m': startDate = subMonths(today, 6); break;
+            case '1a': startDate = subYears(today, 1); break;
             case 'mais': startDate = new Date(0); break;
         }
-
         for (const dateString of Object.keys(selectedClientData.dailyLogs)) {
             const logDate = parseISO(dateString);
             if (isAfter(logDate, startDate) || isSameDay(logDate, startDate)) {
-                if (typeof selectedClientData.dailyLogs[dateString].weight === 'number' && !isNaN(selectedClientData.dailyLogs[dateString].weight)) {
-                    return true;
-                }
+                const weightValue = selectedClientData.dailyLogs[dateString].weight;
+                if (typeof weightValue === 'number') return true;
             }
         }
         return false;
@@ -334,13 +231,12 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
 
     const handleLogout = useCallback(() => {
         setSelectedClientData(null);
-        Alert.alert("Sessão Encerrada", "Você foi desconectado do plano do cliente.");
-        navigation.goBack();
+        Alert.alert("Sessão Encerrada", "Você foi desconectado do plano do cliente.", [{ text: "OK", onPress: () => navigation.goBack() }]);
     }, [navigation]);
-
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
+            {/* Header com a imagem de fundo */}
             <View style={styles.headerContainer}>
                 <Image
                     source={require('../../assets/background_nutri.png')}
@@ -350,24 +246,25 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
                 <View style={styles.headerOverlay}></View>
             </View>
 
+            {/* SEÇÃO PRINCIPAL (SÓ VISÍVEL SE HÁ CLIENTE SELECIONADO OU CARREGANDO) */}
             {isLoadingClientData ? (
                 <View style={styles.loadingClientContainer}>
                     <ActivityIndicator size="large" color="#AEF359" />
                     <Text style={styles.loadingClientText}>Carregando dados do cliente...</Text>
                 </View>
-            ) : errorClientData ? (
+            ) : errorClientData || !selectedClientData ? (
                 <View style={styles.errorContainer}>
                     <MaterialIcons name="error-outline" size={40} color="#C62828" />
-                    <Text style={styles.errorText}>{errorClientData}</Text>
+                    <Text style={styles.errorText}>{errorClientData || "Cliente não encontrado."}</Text>
                     <TouchableOpacity onPress={() => clientUid && fetchClientFullData(clientUid)} style={styles.retryButton}>
                         <Text style={styles.retryButtonText}>Tentar Novamente</Text>
                     </TouchableOpacity>
                 </View>
-            ) : selectedClientData ? (
+            ) : (
                 <>
                     <Text style={styles.title}>Olá, Nutricionista</Text>
                     <Text style={styles.subtitle}>
-                        Sessão de edição ativa para: <Text style={{ fontWeight: 'bold' }}>{selectedClientData.nome || 'Cliente'}</Text>. As suas alterações são visíveis apenas para este utilizador.
+                        Sessão de edição ativa para: <Text style={{ fontWeight: 'bold' }}>{selectedClientData.nome}</Text>. As suas alterações são visíveis apenas para este utilizador.
                     </Text>
 
                     <View style={styles.periodSelector}>
@@ -485,8 +382,8 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
                         </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity onPress={saveClientData} style={styles.saveButton} disabled={isLoadingClientData}>
-                        {isLoadingClientData ? (
+                    <TouchableOpacity onPress={saveClientData} style={styles.saveButton} disabled={isLoadingSave}>
+                        {isLoadingSave ? (
                             <ActivityIndicator size="small" color="#000" />
                         ) : (
                             <>
@@ -496,15 +393,6 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = () => {
                         )}
                     </TouchableOpacity>
                 </>
-            ) : (
-                <View style={styles.noClientSelectedContainer}>
-                    <MaterialIcons name="person-search" size={60} color="#9E9E9E" />
-                    <Text style={styles.noClientSelectedText}>Nenhum cliente selecionado.</Text>
-                    <Text style={styles.noClientSelectedText}>Volte para a tela anterior e insira o código de partilha para gerenciar um plano.</Text>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.retryButton}>
-                        <Text style={styles.retryButtonText}>Voltar</Text>
-                    </TouchableOpacity>
-                </View>
             )}
 
             <Text style={styles.footerText}>
@@ -559,7 +447,7 @@ const styles = StyleSheet.create({
     accessCodeSection: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: -100, // Ajusta para aparecer sobre a imagem de fundo
+        marginTop: -100,
         marginBottom: 20,
         backgroundColor: '#1C1C1E',
         borderRadius: 50,
@@ -831,7 +719,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
     },
-    errorContainer: { // Adicionado estilo para errorContainer (reutilizado de ProgressoDetalhado)
+    errorContainer: {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 40,
@@ -840,14 +728,13 @@ const styles = StyleSheet.create({
         marginTop: 20,
         minHeight: 250,
     },
-    errorText: { // Adicionado estilo para errorText
+    errorText: {
         color: '#C62828',
         textAlign: 'center',
         marginTop: 10,
         marginBottom: 10,
         fontSize: 16,
     },
-
 });
 
 export default NutricionistaScreen;
