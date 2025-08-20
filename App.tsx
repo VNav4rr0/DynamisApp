@@ -27,7 +27,6 @@ import NutricionistaAccessScreen from './src/screens/NutricionistaAccessScreen';
 // Componente da TabBar Customizada
 import CustomTabBar from './src/components/CustomTabBar';
 
-// Suprimir o aviso de "Text strings" (mantenha ativo por enquanto)
 LogBox.ignoreLogs(['Warning: Text strings must be rendered within a <Text> component.']);
 
 
@@ -41,8 +40,6 @@ export type AuthStackParamList = {
     RecuperarSenha: undefined;
     DefinirMetas: undefined;
     NutricionistaAccess: undefined;
-    // CORREÇÃO: Mover a tela Nutricionista para o AuthStackParamList
-    Nutricionista: { clientUid: string; clientName: string; }; 
 };
 export type MainTabParamList = {
     HomeTab: undefined;
@@ -51,7 +48,7 @@ export type MainTabParamList = {
 };
 export type AppStackParamList = {
     MainTabs: undefined;
-    // REMOVIDO: Nutricionista daqui
+    Nutricionista: { clientUid: string; clientName: string; } | undefined;
     GerenciarInformacoes: undefined;
 };
 
@@ -75,7 +72,7 @@ function MainTabNavigator() {
                 tabBarButton: undefined,
             }}
             tabBar={(props) => <CustomTabBar {...props} />}
-            initialRouteName="PerfilTab"
+            initialRouteName="HomeTab" // <-- MUDANÇA AQUI: de "PerfilTab" para "HomeTab"
         >
             <MainTab.Screen name="HomeTab" component={HomeScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Home' }}/>
             <MainTab.Screen name="ProgressoDetalhadoTab" component={ProgressoDetalhadoScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Progresso Detalhado' }}/>
@@ -93,8 +90,6 @@ function AuthNavigator() {
             <AuthStack.Screen name="RecuperarSenha" component={RecuperarSenhaScreen} />
             <AuthStack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
             <AuthStack.Screen name="NutricionistaAccess" component={NutricionistaAccessScreen} />
-            {/* CORREÇÃO: A tela Nutricionista agora pertence a este navegador */}
-            <AuthStack.Screen name="Nutricionista" component={NutricionistaScreen} />
         </AuthStack.Navigator>
     );
 }
@@ -103,7 +98,7 @@ function AppFlowNavigator() {
     return (
         <AppStackNavigator.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' }, title: '', headerTitle: () => null, headerBackTitle: '', headerBackTitleVisible: false, headerTintColor: 'transparent', }}>
             <AppStackNavigator.Screen name="MainTabs" component={MainTabNavigator} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
-            {/* REMOVIDO: A tela Nutricionista não precisa mais estar aqui */}
+            <AppStackNavigator.Screen name="Nutricionista" component={NutricionistaScreen} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
             <AppStackNavigator.Screen name="GerenciarInformacoes" component={GerenciarInformacoesScreen} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
         </AppStackNavigator.Navigator>
     );

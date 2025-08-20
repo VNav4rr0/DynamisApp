@@ -1,5 +1,5 @@
 // src/screens/PerfilScreen.tsx
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -130,6 +130,9 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
     const [avisosNutricionista, setAvisosNutricionista] = useState<string | null>(null);
     const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay());
 
+    // Novo estado para controlar a exibição do modal de plano completo
+    const [isPlanoModalVisible, setIsPlanoModalVisible] = useState(false);
+
     const isFocused = useIsFocused();
 
     const showSnackbar = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -195,6 +198,12 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
             const userDocSnap = await getDoc(userDocRef);
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
+                console.log("Debug - Dados carregados:");
+                console.log("- Nome:", userData.nome);
+                console.log("- Planos de Refeição:", userData.planosDeRefeicao);
+                console.log("- Avisos:", userData.avisosImportantes);
+                console.log("- Nutricionista vinculado:", !!userData.nutricionistaVinculadoUID);
+                
                 setUserName(userData.nome || '');
                 setUserEmail(userData.email || '');
                 setNotificationsEnabled(userData.notificationsEnabled ?? true);
@@ -307,11 +316,27 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
         }
     };
 
-    const diaDaSemanaAtual = daysOfWeek[new Date().getDay()];
-    const planoDoDia = planoDeRefeicao?.[diaDaSemanaAtual] || {};
-    const hasPlanoDoDia = Object.keys(planoDoDia).length > 0;
+    // Função para obter o dia da semana atual em português
+    const getCurrentDayName = () => {
+        const today = new Date().getDay();
+        // Ajustar para começar na segunda (0 = Domingo, mas queremos Seg = 0)
+        const adjustedDay = today === 0 ? 6 : today - 1;
+        return daysOfWeek[adjustedDay];
+    };
 
-    const hasPlanoVinculado = nutricionistaVinculado && planoDeRefeicao && Object.keys(planoDeRefeicao).length > 0;
+    const diaDaSemanaAtual = getCurrentDayName();
+    const planoDoDia = planoDeRefeicao?.[diaDaSemanaAtual] || {};
+    const hasPlanoDoDia = Object.keys(planoDoDia).length > 0 && Object.values(planoDoDia).some(meal => meal && meal.trim() !== '');
+
+    // CORREÇÃO: Verificar se realmente há planos de refeição
+    const hasPlanoVinculado = useMemo(() => {
+        if (!planoDeRefeicao) return false;
+        
+        return Object.keys(planoDeRefeicao).length > 0 && 
+            Object.values(planoDeRefeicao).some(dayPlan => 
+                dayPlan && Object.values(dayPlan).some(meal => meal && meal.trim() !== '')
+            );
+    }, [planoDeRefeicao]);
 
     return (
         <View style={styles.rootContainer}>
@@ -328,6 +353,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
                     )}
                 </View>
 
+                {/* Modal para código de partilha */}
                 <Modal
                     animationType="fade"
                     transparent={true}
@@ -347,6 +373,63 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
                             >
                                 <Text style={styles.modalButtonTextGreen}>{t('profile.modalBackButton')}</Text>
                             </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+
+                {/* Modal para exibir o plano completo */}
+                <Modal
+                    animationType="slide"
+                    transparent={true}
+                    visible={isPlanoModalVisible}
+                    onRequestClose={() => setIsPlanoModalVisible(false)}
+                >
+                    <View style={styles.planoModalOverlay}>
+                        <View style={styles.planoModalContainer}>
+                            <TouchableOpacity 
+                                style={styles.closeModalButton}
+                                onPress={() => setIsPlanoModalVisible(false)}
+                            >
+                                <MaterialCommunityIcons name="close" size={24} color="#E0E0E0" />
+                            </TouchableOpacity>
+                            
+                            <Text style={styles.planoModalTitle}>Plano de Refeições Completo</Text>
+                            <Text style={styles.planoModalSubtitle}>Criado pelo seu nutricionista</Text>
+                            
+                            <ScrollView style={styles.modalScrollContent} showsVerticalScrollIndicator={false}>
+                                {daysOfWeek.map((day, dayIndex) => {
+                                    const dayPlan = planoDeRefeicao?.[day] || {};
+                                    const hasDayPlan = Object.values(dayPlan).some(meal => meal && meal.trim() !== '');
+                                    
+                                    if (!hasDayPlan) return null;
+                                    
+                                    return (
+                                        <View key={dayIndex} style={styles.planoDaySection}>
+                                            <Text style={styles.planoDayTitle}>{day}</Text>
+                                            <View style={styles.planoMealsContainer}>
+                                                {refeicoes.map((refeicao, mealIndex) => {
+                                                    const mealContent = dayPlan[refeicao.nome];
+                                                    if (!mealContent || mealContent.trim() === '') return null;
+                                                    
+                                                    return (
+                                                        <View key={mealIndex} style={styles.mealItem}>
+                                                            <MaterialCommunityIcons 
+                                                                name={refeicao.icone as any} 
+                                                                size={20} 
+                                                                color="#AEF359" 
+                                                            />
+                                                            <View style={styles.mealTextContainer}>
+                                                                <Text style={styles.mealTitle}>{refeicao.nome}</Text>
+                                                                <Text style={styles.mealDescription}>{mealContent}</Text>
+                                                            </View>
+                                                        </View>
+                                                    );
+                                                })}
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </ScrollView>
                         </View>
                     </View>
                 </Modal>
@@ -383,7 +466,6 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Seção Nutricionista */}
                 <View style={styles.nutritionistSection}>
                     {isLoadingUserData ? (
                         <View style={styles.textCard}>
@@ -402,21 +484,37 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
                             ) : (
                                 <>
                                     <View style={styles.nutritionistContent}>
-                                        <Text style={styles.sectionTitle}>{t('profile.planoDeRefeicoesTitle')}</Text>
+                                        <View style={styles.planoHeaderContainer}>
+                                            <Text style={styles.sectionTitle}>Plano de Refeições</Text>
+                                        </View>
+                                        
                                         <Text style={styles.sectionSubtitle}>Plano atual para {diaDaSemanaAtual}</Text>
+                                        
                                         {hasPlanoDoDia ? (
-                                            refeicoes.map((ref, index) => (
-                                                <View key={index} style={styles.mealItem}>
-                                                    <MaterialCommunityIcons name={ref.icone as any} size={20} color="#AEF359" />
-                                                    <View style={styles.mealTextContainer}>
-                                                        <Text style={styles.mealTitle}>{ref.nome}</Text>
-                                                        <Text style={styles.mealDescription}>{planoDoDia[ref.nome] || 'Nenhum item adicionado'}</Text>
+                                            refeicoes.map((ref, index) => {
+                                                const mealContent = planoDoDia[ref.nome];
+                                                if (!mealContent || mealContent.trim() === '') return null;
+                                                
+                                                return (
+                                                    <View key={index} style={styles.mealItem}>
+                                                        <MaterialCommunityIcons name={ref.icone as any} size={20} color="#AEF359" />
+                                                        <View style={styles.mealTextContainer}>
+                                                            <Text style={styles.mealTitle}>{ref.nome}</Text>
+                                                            <Text style={styles.mealDescription}>{mealContent}</Text>
+                                                        </View>
                                                     </View>
-                                                </View>
-                                            ))
+                                                );
+                                            })
                                         ) : (
                                             <View style={styles.noPlanContainer}>
-                                                <Text style={styles.noPlanText}>Nenhum plano de refeição definido para hoje.</Text>
+                                                <MaterialCommunityIcons name="calendar-remove" size={32} color="#9E9E9E" />
+                                                <Text style={styles.noPlanText}>Nenhum plano definido para hoje.</Text>
+                                                <TouchableOpacity 
+                                                    style={styles.viewOtherDaysButton}
+                                                    onPress={() => setIsPlanoModalVisible(true)}
+                                                >
+                                                    <Text style={styles.viewOtherDaysText}>Ver outros dias</Text>
+                                                </TouchableOpacity>
                                             </View>
                                         )}
                                     </View>
@@ -425,7 +523,7 @@ const PerfilScreen: React.FC<PerfilScreenProps> = () => {
                                         <View style={styles.avisosContainer}>
                                             <View style={styles.importantHeader}>
                                                 <MaterialCommunityIcons name="alert-circle" size={20} color="#AEF359" style={{ marginRight: 6 }} />
-                                                <Text style={styles.importantTitle}>{t('profile.importantTitle')}</Text>
+                                                <Text style={styles.importantTitle}>Avisos Importantes</Text>
                                             </View>
                                             <Text style={styles.avisosText}>{avisosNutricionista}</Text>
                                         </View>
@@ -574,6 +672,24 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         padding: 20,
     },
+    planoHeaderContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 7,
+    },
+    viewAllButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+    },
+    viewAllText: {
+        color: '#AEF359',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginRight: 4,
+    },
     mealItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -581,6 +697,7 @@ const styles = StyleSheet.create({
     },
     mealTextContainer: {
         marginLeft: 10,
+        flex: 1,
     },
     mealTitle: {
         color: '#FFFFFF',
@@ -590,6 +707,7 @@ const styles = StyleSheet.create({
     mealDescription: {
         color: '#9E9E9E',
         fontSize: 14,
+        lineHeight: 20,
     },
     noPlanContainer: {
         alignItems: 'center',
@@ -598,6 +716,19 @@ const styles = StyleSheet.create({
     noPlanText: {
         color: '#9E9E9E',
         textAlign: 'center',
+        marginTop: 10,
+        marginBottom: 15,
+    },
+    viewOtherDaysButton: {
+        backgroundColor: '#243314',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+    },
+    viewOtherDaysText: {
+        color: '#AEF359',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
     avisosContainer: {
         backgroundColor: '#1C1C1E',
@@ -737,6 +868,9 @@ const styles = StyleSheet.create({
         top: 16,
         right: 16,
         zIndex: 1,
+        padding: 8,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     modalScrollContent: {
         flex: 1,

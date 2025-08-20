@@ -1,3 +1,4 @@
+// src/screens/HomeScreen.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
@@ -86,10 +87,7 @@ const DayButton: React.FC<DayButtonProps> = ({ day, label, isActive, isCompleted
 );
 
 
-// --- Componente Principal ---
-
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-    // Estados
     const [currentDayIndex, setCurrentDayIndex] = useState<number>(new Date().getDay());
     const [currentStreak, setCurrentStreak] = useState<number>(0);
     const [completedDays, setCompletedDays] = useState<string[]>([]);
@@ -105,10 +103,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     const [isLoadingStreak, setIsLoadingStreak] = useState(true);
     const [errorLoadingStreak, setErrorLoadingStreak] = useState<string | null>(null);
 
-    // --- NOVOS ESTADOS PARA CUSTOM ALERT MODAL ---
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertTitle, setAlertTitle] = useState('');
     const [alertMessage, setAlertMessage] = useState('');
+    const [alertType, setAlertType] = useState<'success' | 'error'>('error'); 
 
     const isFocused = useIsFocused();
 
@@ -118,10 +116,20 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         "A disciplina te leva longe!",
     ];
 
-    // --- FUNÇÕES DO CUSTOM ALERT MODAL ---
-    const showAlert = useCallback((title: string, message: string) => {
+    const days = [
+        { day: 'Dom', label: 'Dom' },
+        { day: 'Seg', label: 'Seg' },
+        { day: 'Ter', label: 'Ter' },
+        { day: 'Qua', label: 'Qua' },
+        { day: 'Qui', label: 'Qui' },
+        { day: 'Sex', label: 'Sex' },
+        { day: 'Sab', label: 'Sab' },
+    ];
+
+    const showAlert = useCallback((title: string, message: string, type: 'success' | 'error' = 'error') => {
         setAlertTitle(title);
         setAlertMessage(message);
+        setAlertType(type);
         setIsAlertVisible(true);
     }, []);
 
@@ -129,33 +137,26 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         setIsAlertVisible(false);
     }, []);
 
-    // --- FUNÇÕES DE INTERAÇÃO COM O BANCO DE DADOS (STREAK E DAILY LOGS) ---
     const loadStreakData = useCallback(async () => {
         setIsLoadingStreak(true);
         setErrorLoadingStreak(null);
         const user = auth.currentUser;
 
         if (!user) {
-            console.log("Home: Usuário não logado, não carregando sequência.");
             setIsLoadingStreak(false);
             setCompletedDays([]);
             setCurrentStreak(0);
             setCurrentDayIndex(new Date().getDay());
             return;
         }
-
         try {
             const userDocRef = doc(db, "usuarios", user.uid);
             const userDocSnap = await getDoc(userDocRef);
-
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 const streakData = userData.streakData as StreakData;
                 const today = new Date();
                 const currentDayName = days[today.getDay()].day;
-
-                console.log("Home: Dados de sequência puxados do Firestore:", streakData);
-
                 if (streakData) {
                     let { currentStreak: storedStreak, lastCompletionDate, completedDaysOfWeek } = streakData;
                     const lastDate = parseISO(lastCompletionDate);
@@ -167,54 +168,43 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     const startOfThisWeek = startOfWeek(today, { locale: ptBR, weekStartsOn: 0 });
 
                     if (!isSameDay(startOfLastWeek, startOfThisWeek)) {
-                        console.log("Home: Nova semana detectada. Resetando dias da semana completados.");
                         newCompletedDaysOfWeek = [];
                     }
-
                     if (isToday(lastDate)) {
-                        console.log("Home: Atividade já registrada hoje. Sequência atual:", newStreak);
+                        // Não muda nada se já completou hoje
                     } else if (isYesterday(lastDate)) {
-                        console.log("Home: Última atividade foi ontem. Sequência continua:", newStreak);
                         newStreak += 1;
                     } else {
-                        console.log("Home: Sequência perdida. Resetando sequência.");
                         newStreak = 0;
                         newCompletedDaysOfWeek = [];
                     }
-
                     if (isToday(lastDate) && !newCompletedDaysOfWeek.includes(currentDayName)) {
                          newCompletedDaysOfWeek.push(currentDayName);
                     } else if (!isToday(lastDate) && newCompletedDaysOfWeek.includes(currentDayName)) {
                         newCompletedDaysOfWeek = newCompletedDaysOfWeek.filter(day => day !== currentDayName);
                     }
-
                     setCurrentStreak(newStreak);
                     setCompletedDays(newCompletedDaysOfWeek);
                     setCurrentDayIndex(today.getDay());
                     setPlayFireAnimation(true);
-                    
                 } else {
-                    console.log("Home: streakData não encontrado no Firestore. Iniciando sequência em 0.");
                     setCurrentStreak(0);
                     setCompletedDays([]);
                     setCurrentDayIndex(new Date().getDay());
                 }
             } else {
-                console.log("Home: Documento do usuário não encontrado. Iniciando sequência em 0.");
                 setCurrentStreak(0);
                 setCompletedDays([]);
                 setCurrentDayIndex(new Date().getDay());
             }
-        } catch (error) {
-            console.error("Home: Erro ao carregar dados de sequência:", error);
-            setErrorLoadingStreak("Erro ao carregar sua sequência. Tente novamente.");
+        } catch (error: any) {
+            setErrorLoadingStreak("Erro ao carregar sua sequência. Verifique sua conexão e tente novamente.");
             setCurrentStreak(0);
             setCompletedDays([]);
         } finally {
             setIsLoadingStreak(false);
-            console.log("Home: Carregamento de sequência finalizado.");
         }
-    }, [showAlert]); // Adicionado showAlert como dependência
+    }, [showAlert]);
 
     const saveStreakAndDailyLogData = useCallback(async (
         newStreak: number, 
@@ -223,35 +213,28 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     ) => {
         const user = auth.currentUser;
         if (!user) {
-            console.error("Home: Usuário não logado, não pode salvar sequência ou dados diários.");
-            showAlert("Erro", "Você precisa estar logado para salvar seu progresso."); // Usando showAlert
+            showAlert("Erro", "Você precisa estar logado para salvar seu progresso.");
             return;
         }
-
         const todayDateISO = format(new Date(), 'yyyy-MM-dd');
-
         const updatedStreakData: StreakData = {
             currentStreak: newStreak,
             lastCompletionDate: todayDateISO,
             completedDaysOfWeek: newCompletedDays,
         };
-
         try {
             const userDocRef = doc(db, "usuarios", user.uid);
             await updateDoc(userDocRef, { 
                 streakData: updatedStreakData,
                 [`dailyLogs.${todayDateISO}`]: dailyLogData
             });
-            console.log("Home: Sequência e dados diários salvos com sucesso no Firestore:", updatedStreakData, dailyLogData);
-            showAlert("Sucesso", "Seu progresso foi salvo!"); // Usando showAlert para sucesso
-        } catch (error) {
-            console.error("Home: Erro ao salvar dados de sequência ou diários:", error);
-            showAlert("Erro", "Não foi possível salvar seu progresso. Tente novamente."); // Usando showAlert para erro
+            showAlert("Sucesso", "Seu progresso foi salvo!", 'success');
+        } catch (error: any) {
+            showAlert("Erro", "Não foi possível salvar seu progresso. Tente novamente.");
         }
     }, [showAlert]);
 
 
-    // --- EFEITOS ---
     useEffect(() => {
         if (isFocused) {
             loadStreakData();
@@ -267,7 +250,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         }
     }, [playFireAnimation, fireAnimation]);
 
-    // --- FUNÇÕES DE MANIPULAÇÃO DE DADOS ---
     const openModal = () => {
         const randomIndex = Math.floor(Math.random() * motivationalPhrases.length);
         setModalSubtitle(motivationalPhrases[randomIndex]);
@@ -289,19 +271,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         const user = auth.currentUser;
         if (!user) {
-            console.error("Home: Usuário não logado ao tentar salvar dados. Operação abortada.");
-            showAlert("Erro", "Você precisa estar logado para salvar seu progresso."); // Usando showAlert
+            showAlert("Erro", "Você precisa estar logado para salvar seu progresso.");
             handleCloseModal();
             return;
         }
 
-        // Validação dos inputs - AGORA USANDO showAlert
         const parsedCalories = parseFloat(calories);
         const parsedWeight = parseFloat(weight);
         const parsedWater = parseFloat(water);
 
         if (isNaN(parsedCalories) || isNaN(parsedWeight) || isNaN(parsedWater)) {
-            showAlert("Erro de Validação", "Por favor, insira valores numéricos válidos para Calorias, Peso e Água."); // Usando showAlert
+            showAlert("Erro de Validação", "Por favor, insira valores numéricos válidos para Calorias, Peso e Água.");
             return;
         }
 
@@ -317,14 +297,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             const lastDate = lastDateISO ? parseISO(lastDateISO) : null;
             
             if (lastDate && isToday(lastDate)) {
-                console.log("Home: Meta diária já completada para hoje. Apenas atualizando dados diários.");
+                // Já completou hoje, apenas atualiza dados diários
             } else if (lastDate && isYesterday(lastDate)) {
                 newStreak += 1;
-                console.log("Home: Sequência continuada. Nova sequência:", newStreak);
             } else {
                 newStreak = 1;
                 newCompletedDays = []; 
-                console.log("Home: Nova sequência iniciada/resetada:", newStreak);
             }
 
             if (!newCompletedDays.includes(todayName)) {
@@ -347,8 +325,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             await saveStreakAndDailyLogData(newStreak, newCompletedDays, dailyLogData);
 
         } catch (error) {
-            console.error("Home: Erro ao processar ou salvar dados diários:", error);
-            showAlert("Erro ao Salvar", "Não foi possível salvar seu progresso. Tente novamente."); // Usando showAlert
+            showAlert("Erro ao Salvar", "Não foi possível salvar seu progresso. Tente novamente.");
         } finally {
             handleCloseModal();
         }
@@ -361,15 +338,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         navigation.navigate('PerfilTab');
     };
 
-    const days = [
-        { day: 'Dom', label: 'Dom' },
-        { day: 'Seg', label: 'Seg' },
-        { day: 'Ter', label: 'Ter' },
-        { day: 'Qua', label: 'Qua' },
-        { day: 'Qui', label: 'Qui' },
-        { day: 'Sex', label: 'Sex' },
-        { day: 'Sab', label: 'Sab' },
-    ];
+ 
 
     return (
         <View style={styles.rootContainer}>
@@ -463,7 +432,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                 <Text style={styles.errorTextSmall}>{errorLoadingStreak}</Text>
                             ) : (
                                 <View style={styles.streakContainer}>
-                                    <Text style={styles.streakText}>+320 kcal</Text> {/* Valor fixo, pode vir do DB depois */}
+                                    <Text style={styles.streakText}>+320 kcal</Text>
                                     <Animated.View style={{ transform: [{ scale: fireAnimation }] }}>
                                         <MaterialCommunityIcons name="fire" size={20} color="#FFA726" />
                                     </Animated.View>
@@ -509,13 +478,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 </View>
             </ScrollView>
 
-            {/* Renderiza o CustomAlertModal aqui */}
             <CustomAlertModal
                 isVisible={isAlertVisible}
                 title={alertTitle}
                 message={alertMessage}
                 onClose={hideAlert}
-                type={'error'} // Sempre 'error' para este cenário de validação
+                type={'error'}
             />
         </View>
     );
@@ -528,7 +496,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#000',
     },
     scrollContentContainer: {
-        paddingBottom: 120, // Manter o padding para a área onde a navbar estará (vinda de App.tsx)
+        paddingBottom: 120,
     },
     coverSection: {
         width: '100%',
