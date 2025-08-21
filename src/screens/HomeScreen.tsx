@@ -483,7 +483,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 title={alertTitle}
                 message={alertMessage}
                 onClose={hideAlert}
-                type={'error'}
+                type={alertType}
             />
         </View>
     );

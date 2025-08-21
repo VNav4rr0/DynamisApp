@@ -1,49 +1,45 @@
-
-
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Icon } from 'react-native-paper';
 
-// Definindo os idiomas disponíveis
-const LANGUAGES = [
-  { code: 'pt', name: 'Português' },
-  { code: 'en', name: 'Inglês' },
-  // Adicione outros idiomas aqui
-];
+// Componente para exibir os idiomas disponíveis no dropdown
+const LanguageOption: React.FC<{
+  label: string;
+  onPress: () => void;
+}> = ({ label, onPress }) => (
+  <TouchableOpacity style={styles.optionButton} onPress={onPress}>
+    <Text style={styles.optionText}>{label}</Text>
+  </TouchableOpacity>
+);
 
-const LanguageSwitcherDropdown = () => {
+const LanguageSwitcherDropdown: React.FC = () => {
   const { i18n } = useTranslation();
-  const [isMenuVisible, setMenuVisible] = useState(false);
+  const [dropdownVisible, setDropdownVisible] = useState(false); // NOVO ESTADO para o dropdown
 
-  const onSelectLanguage = (code: string) => {
-    i18n.changeLanguage(code);
-    setMenuVisible(false); // Fecha o menu após a seleção
+  const currentLanguage = i18n.language;
+
+  const toggleDropdown = () => {
+    setDropdownVisible(!dropdownVisible);
+  };
+
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    setDropdownVisible(false); // Fechar o dropdown após a seleção
   };
 
   return (
-    <View style={styles.wrapper}>
-      {/* Botão que abre/fecha o menu */}
-      <TouchableOpacity 
-        style={styles.triggerButton} 
-        onPress={() => setMenuVisible(!isMenuVisible)}
-      >
-        <Icon source="web" size={24} color="#000" />
+    <View style={styles.container}>
+      <TouchableOpacity onPress={toggleDropdown} style={styles.button}>
+        <Text style={styles.buttonText}>{currentLanguage.toUpperCase()}</Text>
+        <MaterialIcons name="arrow-drop-down" size={24} color="#FFF" />
       </TouchableOpacity>
 
-      {/* O menu dropdown, que só aparece se isMenuVisible for true */}
-      {isMenuVisible && (
-        <View style={styles.dropdown}>
-          {LANGUAGES.map((lang) => (
-            <TouchableOpacity
-              key={lang.code}
-              style={styles.dropdownItem}
-              onPress={() => onSelectLanguage(lang.code)}
-            >
-              <Icon source="web" size={20} color="#FFF" />
-              <Text style={styles.dropdownItemText}>{lang.name}</Text>
-            </TouchableOpacity>
-          ))}
+      {dropdownVisible && ( // Renderização condicional para o dropdown
+        <View style={styles.dropdownMenu}>
+          <LanguageOption label="Português" onPress={() => changeLanguage('pt')} />
+          <View style={styles.divider} />
+          <LanguageOption label="English" onPress={() => changeLanguage('en')} />
         </View>
       )}
     </View>
@@ -51,37 +47,47 @@ const LanguageSwitcherDropdown = () => {
 };
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative', // Necessário para o posicionamento absoluto do dropdown
-    zIndex: 1, // Garante que o menu apareça sobre outros elementos
-  },
-  triggerButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24, // 50% de width/height para ser um círculo perfeito
-    backgroundColor: '#6ad400', // Cor verde
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdown: {
+  container: {
     position: 'absolute',
-    top: 56, // Distância do topo do botão (48 de altura + 8 de margem)
-    right: 0,
-    backgroundColor: 'rgba(40, 40, 40, 0.9)', // Fundo escuro semitransparente
-    borderRadius: 8,
-    padding: 8,
-    width: 150, // Largura do menu
+    top: 0,
+    right: 20,
+    zIndex: 10,
   },
-  dropdownItem: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  dropdownItemText: {
-    color: '#FFFFFF',
-    fontFamily: 'Fustat-Medium',
+  buttonText: {
+    color: '#FFF',
     fontSize: 16,
-    marginLeft: 10,
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 40, // Posição abaixo do botão
+    right: 0,
+    backgroundColor: '#1C1C1E',
+    borderRadius: 10,
+    padding: 10,
+    minWidth: 150,
+  },
+  optionButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+  },
+  optionText: {
+    color: '#FFF',
+    fontSize: 16,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#424242',
+    marginVertical: 5,
   },
 });
 
