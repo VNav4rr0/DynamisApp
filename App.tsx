@@ -1,7 +1,6 @@
-// App.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import './src/i18n';
-import { View, StyleSheet, ActivityIndicator, Dimensions, Text, LogBox } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, LogBox } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -23,14 +22,9 @@ import PerfilScreen from './src/screens/PerfilScreen';
 import NutricionistaScreen from './src/screens/NutricionistaScreen';
 import GerenciarInformacoesScreen from './src/screens/GerenciarInformacoesScreen';
 import NutricionistaAccessScreen from './src/screens/NutricionistaAccessScreen';
-
-// Componente da TabBar Customizada
 import CustomTabBar from './src/components/CustomTabBar';
 
 LogBox.ignoreLogs(['Warning: Text strings must be rendered within a <Text> component.']);
-
-
-const { width } = Dimensions.get('window');
 
 // Tipagem
 export type AuthStackParamList = {
@@ -48,11 +42,11 @@ export type MainTabParamList = {
 };
 export type AppStackParamList = {
     MainTabs: undefined;
-    Nutricionista: { clientUid: string; clientName: string; } | undefined;
+    Nutricionista: { clientUid: string; clientName: string; };
     GerenciarInformacoes: undefined;
 };
 
-
+// Definição dos Stacks
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStackNavigator = createNativeStackNavigator<AppStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
@@ -61,45 +55,49 @@ const MainTab = createBottomTabNavigator<MainTabParamList>();
 function MainTabNavigator() {
     return (
         <MainTab.Navigator
-            screenOptions={{
-                headerShown: false,
-                tabBarShowLabel: false,
-                tabBarLabel: () => null,
-                title: '',
-                headerTitle: () => null, 
-                headerTintColor: 'transparent',
-                tabBarIcon: () => null,
-                tabBarButton: undefined,
-            }}
             tabBar={(props) => <CustomTabBar {...props} />}
-            initialRouteName="HomeTab" // <-- MUDANÇA AQUI: de "PerfilTab" para "HomeTab"
+            screenOptions={{ headerShown: false }}
         >
-            <MainTab.Screen name="HomeTab" component={HomeScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Home' }}/>
-            <MainTab.Screen name="ProgressoDetalhadoTab" component={ProgressoDetalhadoScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Progresso Detalhado' }}/>
-            <MainTab.Screen name="PerfilTab" component={PerfilScreen} options={{ tabBarLabel: '', tabBarAccessibilityLabel: 'Perfil' }}/>
+            <MainTab.Screen name="HomeTab" component={HomeScreen} />
+            <MainTab.Screen name="ProgressoDetalhadoTab" component={ProgressoDetalhadoScreen} />
+            <MainTab.Screen name="PerfilTab" component={PerfilScreen} />
         </MainTab.Navigator>
     );
 }
 
-function AuthNavigator() {
+// Navegador de Autenticação - Passa a função para criar uma sessão de cliente
+function AuthNavigator({ setClientSession }: { setClientSession: (session: { clientUid: string; clientName: string; }) => void }) {
     return (
-        <AuthStack.Navigator initialRouteName="BoasVindas" screenOptions={{ headerShown: false, title: '', headerTitle: () => null, headerBackTitle: '', headerBackTitleVisible: false, headerTintColor: 'transparent', }}>
+        <AuthStack.Navigator screenOptions={{ headerShown: false }}>
             <AuthStack.Screen name="BoasVindas" component={BoasVindasScreen} />
             <AuthStack.Screen name="Login" component={LoginScreen} />
             <AuthStack.Screen name="CadastroInicial" component={CadastroInicialScreen} />
             <AuthStack.Screen name="RecuperarSenha" component={RecuperarSenhaScreen} />
             <AuthStack.Screen name="DefinirMetas" component={DefinirMetasScreen} />
-            <AuthStack.Screen name="NutricionistaAccess" component={NutricionistaAccessScreen} />
+            <AuthStack.Screen name="NutricionistaAccess">
+                {(props) => <NutricionistaAccessScreen {...props} setClientSession={setClientSession} />}
+            </AuthStack.Screen>
         </AuthStack.Navigator>
     );
 }
 
-function AppFlowNavigator() {
+// Navegador Principal - Decide a rota inicial com base na existência de uma sessão de cliente
+function AppFlowNavigator({ clientSession, onLogout }: { 
+    clientSession: { clientUid: string; clientName: string; } | null;
+    onLogout: () => void;
+}) {
     return (
-        <AppStackNavigator.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#000000' }, title: '', headerTitle: () => null, headerBackTitle: '', headerBackTitleVisible: false, headerTintColor: 'transparent', }}>
-            <AppStackNavigator.Screen name="MainTabs" component={MainTabNavigator} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
-            <AppStackNavigator.Screen name="Nutricionista" component={NutricionistaScreen} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
-            <AppStackNavigator.Screen name="GerenciarInformacoes" component={GerenciarInformacoesScreen} options={{ title: '', headerTitle: () => null, headerBackTitle: '' }}/>
+        <AppStackNavigator.Navigator
+            initialRouteName={clientSession ? 'Nutricionista' : 'MainTabs'}
+            screenOptions={{ headerShown: false }}
+        >
+            <AppStackNavigator.Screen name="MainTabs" component={MainTabNavigator} />
+            <AppStackNavigator.Screen
+                name="Nutricionista"
+                children={(props) => <NutricionistaScreen {...props} onLogout={onLogout} />}
+                initialParams={clientSession ?? undefined}
+            />
+            <AppStackNavigator.Screen name="GerenciarInformacoes" component={GerenciarInformacoesScreen} />
         </AppStackNavigator.Navigator>
     );
 }
@@ -117,15 +115,21 @@ const FONT_ASSETS = {
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-    const [fontsLoaded, fontError] = useFonts(FONT_ASSETS); 
-
+    const [fontsLoaded, fontError] = useFonts(FONT_ASSETS);
     const [initializing, setInitializing] = useState(true);
     const [user, setUser] = useState<User | null>(null);
+    const [clientSession, setClientSession] = useState<{ clientUid: string; clientName: string; } | null>(null);
+
+    const clearClientSession = () => {
+        setClientSession(null);
+    };
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (authUser) => {
             setUser(authUser);
-            setInitializing(false);
+            if (initializing) {
+                setInitializing(false);
+            }
         });
         return unsubscribe;
     }, []);
@@ -135,7 +139,6 @@ export default function App() {
             SplashScreen.hideAsync();
         }
     }, [fontsLoaded, fontError]);
-
 
     if (!fontsLoaded && !fontError || initializing) {
         return (
@@ -148,7 +151,11 @@ export default function App() {
     return (
         <View style={styles.container}>
             <NavigationContainer>
-                {user ? <AppFlowNavigator /> : <AuthNavigator />}
+                {user || clientSession ? (
+                    <AppFlowNavigator clientSession={clientSession} onLogout={clearClientSession} />
+                ) : (
+                    <AuthNavigator setClientSession={setClientSession} />
+                )}
             </NavigationContainer>
             <StatusBar style="light" />
         </View>
@@ -156,14 +163,6 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#000',
-    },
+    container: { flex: 1, backgroundColor: '#000' },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
 });

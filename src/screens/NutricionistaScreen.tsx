@@ -83,10 +83,12 @@ interface ClientData {
     nutricionistaVinculadoUID?: string;
 }
 
-type NutricionistaScreenProps = NativeStackScreenProps<AppStackParamList & AuthStackParamList, 'Nutricionista'>;
+type NutricionistaScreenProps = NativeStackScreenProps<AppStackParamList & AuthStackParamList, 'Nutricionista'> & {
+    onLogout: () => void;
+};
 
 
-const NutricionistaScreen: React.FC<NutricionistaScreenProps> = ({ route, navigation }) => { // CORRIGIDO: Recebe props diretamente
+const NutricionistaScreen: React.FC<NutricionistaScreenProps> = ({ route, navigation, onLogout }) => {
     const { clientUid, clientName } = route.params || {};
 
     const [selectedClientData, setSelectedClientData] = useState<ClientData | null>(null);
@@ -231,8 +233,11 @@ const NutricionistaScreen: React.FC<NutricionistaScreenProps> = ({ route, naviga
 
     const handleLogout = useCallback(() => {
         setSelectedClientData(null);
-        Alert.alert("Sessão Encerrada", "Você foi desconectado do plano do cliente.", [{ text: "OK", onPress: () => navigation.goBack() }]);
-    }, [navigation]);
+        Alert.alert("Sessão Encerrada", "Você foi desconectado do plano do cliente.", [{ 
+            text: "OK", 
+            onPress: onLogout 
+        }]);
+    }, [onLogout]);
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>

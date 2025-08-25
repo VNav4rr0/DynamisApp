@@ -1,81 +1,45 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity,
-    Keyboard,
-    Dimensions,
-    SafeAreaView,
-    TouchableWithoutFeedback,
-    Modal,
-    ActivityIndicator,
+    View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard,
+    Dimensions, SafeAreaView, TouchableWithoutFeedback, ActivityIndicator,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { AuthStackParamList, AppStackParamList } from '../../App'; 
-import { Ionicons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
+import { AuthStackParamList } from '../../App';
 import CustomAlertModal from '../components/CustomAlertModal';
-
-import { collection, query, where, getDocs } from 'firebase/firestore'; 
-import { db } from '../../firebaseConfig/firebase'; 
-
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../firebaseConfig/firebase';
 
 const { height: screenHeight } = Dimensions.get('window');
 
-type NutricionistaAccessScreenProps = NativeStackScreenProps<AuthStackParamList & AppStackParamList, 'NutricionistaAccess'>;
+type NutricionistaAccessScreenProps = NativeStackScreenProps<AuthStackParamList, 'NutricionistaAccess'> & {
+    setClientSession: (session: { clientUid: string; clientName: string; }) => void;
+};
 
 const TOTAL_DIGITABLE_INPUTS = 8;
-const PREFIX_CHARS_LENGTH = 3; 
+const PREFIX_CHARS_LENGTH = 3;
 
-const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ navigation }) => {
+const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ navigation, setClientSession }) => {
     const codeInputRefs = useRef<Array<TextInput | null>>([]);
-    useEffect(() => { 
-        if (codeInputRefs.current.length !== TOTAL_DIGITABLE_INPUTS) {
-            codeInputRefs.current = Array(TOTAL_DIGITABLE_INPUTS).fill(null);
-        }
-    }, []); 
-
     const [accessCodeParts, setAccessCodeParts] = useState<string[]>(Array(TOTAL_DIGITABLE_INPUTS).fill(''));
     const [isLoadingAccess, setIsLoadingAccess] = useState(false);
-    const { t } = useTranslation();
-
     const [isAlertVisible, setIsAlertVisible] = useState(false);
     const [alertTitle, setAlertTitle] = useState('');
     const [alertMessage, setAlertMessage] = useState('');
-    const [alertType, setAlertType] = useState<'success' | 'error'>('error'); 
 
-    // NOVO: estado para a navegação após o modal
-    const [pendingNavigation, setPendingNavigation] = useState<{ screen: 'Nutricionista', params: { clientUid: string, clientName: string } } | null>(null);
-
-    const showAlert = useCallback((title: string, message: string, type: 'success' | 'error' = 'error') => {
+    const showAlert = (title: string, message: string) => {
         setAlertTitle(title);
         setAlertMessage(message);
-        setAlertType(type);
         setIsAlertVisible(true);
-    }, []);
-
-    const hideAlert = () => {
-        setIsAlertVisible(false);
-        // NOVO: executa a navegação pendente após fechar o modal
-        if (pendingNavigation) {
-            navigation.navigate(pendingNavigation.screen as any, pendingNavigation.params as any);
-            setPendingNavigation(null); // Limpa a navegação pendente
-        }
     };
+
+    const hideAlert = () => setIsAlertVisible(false);
 
     const handleCodeChange = (text: string, index: number) => {
         const newCodeParts = [...accessCodeParts];
         newCodeParts[index] = text.toUpperCase();
-        
         setAccessCodeParts(newCodeParts);
-
-        if (newCodeParts[index].length === 1 && index < TOTAL_DIGITABLE_INPUTS - 1) {
+        if (text.length === 1 && index < TOTAL_DIGITABLE_INPUTS - 1) {
             codeInputRefs.current[index + 1]?.focus();
-        } 
-        else if (newCodeParts[index].length === 0 && index > 0) {
-            codeInputRefs.current[index - 1]?.focus();
         }
     };
 
@@ -85,24 +49,17 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
         }
     }, [accessCodeParts]);
 
-
     const handleAccessCodeVerify = async () => {
         const enteredChars = accessCodeParts.join('');
-        
         if (enteredChars.length !== TOTAL_DIGITABLE_INPUTS) {
-            showAlert('Erro de Código', `Por favor, preencha o código completo (${TOTAL_DIGITABLE_INPUTS} caracteres).`);
+            showAlert('Erro', `Por favor, preencha o código completo.`);
             return;
         }
 
-        const prefix = enteredChars.substring(0, 3);
-        const suffix = enteredChars.substring(3);
+        const prefix = enteredChars.substring(0, PREFIX_CHARS_LENGTH);
+        const suffix = enteredChars.substring(PREFIX_CHARS_LENGTH);
         const fullShareCode = `${prefix}-${suffix}`;
 
-        if (prefix !== 'DYN' || suffix.length !== 5) {
-            showAlert('Erro de Código', 'Formato de código inválido. O código deve ser DYN-XXXXX.');
-            return;
-        }
-        
         setIsLoadingAccess(true);
         Keyboard.dismiss();
 
@@ -116,26 +73,20 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                 const clientData = clientDoc.data();
                 const clientUID = clientDoc.id;
 
-                // NOVO: Definimos a navegação pendente
-                setPendingNavigation({ screen: 'Nutricionista', params: { clientUid: clientUID, clientName: clientData.nome } });
-                showAlert('Sucesso', `Cliente ${clientData.nome || 'desconhecido'} encontrado! Redirecionando.`, 'success');
-                setAccessCodeParts(Array(TOTAL_DIGITABLE_INPUTS).fill('')); // Limpa inputs
-                
+                setClientSession({
+                    clientUid: clientUID,
+                    clientName: clientData.nome || 'Cliente',
+                });
             } else {
-                showAlert('Erro de Código', 'Código de acesso inválido ou não encontrado.');
+                showAlert('Erro', 'Código de acesso inválido ou não encontrado.');
             }
-        } catch (error: any) {
-            console.error("Erro ao verificar código de acesso:", error);
-            if (error.code === 'permission-denied') {
-                showAlert('Erro de Permissão', 'Acesso negado. Verifique as regras do Firestore (allow list: if true; ou allow list: if request.auth != null;).');
-            } else {
-                showAlert('Erro', 'Ocorreu um erro ao verificar o código. Tente novamente.');
-            }
+        } catch (error) {
+            console.error("Erro ao verificar código:", error);
+            showAlert('Erro', 'Ocorreu um erro ao verificar o código. Tente novamente.');
         } finally {
             setIsLoadingAccess(false);
         }
     };
-
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -147,8 +98,6 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                             Insira o código de partilha do seu cliente para gerenciar o plano.
                         </Text>
                     </View>
-
-                    {/* Code Inputs */}
                     <View style={styles.codeInputsRow}>
                         {Array.from({ length: TOTAL_DIGITABLE_INPUTS }).map((_, index) => (
                             <React.Fragment key={index}>
@@ -159,18 +108,12 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                                     onChangeText={(text) => handleCodeChange(text, index)}
                                     onKeyPress={(e) => handleKeyPress(e, index)}
                                     maxLength={1}
-                                    keyboardType="default"
                                     autoCapitalize="characters"
-                                    returnKeyType={index === TOTAL_DIGITABLE_INPUTS - 1 ? "done" : "next"}
-                                    onSubmitEditing={index === TOTAL_DIGITABLE_INPUTS - 1 ? handleAccessCodeVerify : undefined}
                                 />
-                                {index === PREFIX_CHARS_LENGTH -1 && (
-                                    <Text style={styles.codeDash}>-</Text>
-                                )}
+                                {index === PREFIX_CHARS_LENGTH - 1 && <Text style={styles.codeDash}>-</Text>}
                             </React.Fragment>
                         ))}
                     </View>
-
                     <TouchableOpacity onPress={handleAccessCodeVerify} style={styles.accessButton} disabled={isLoadingAccess}>
                         {isLoadingAccess ? (
                             <ActivityIndicator size="small" color="#000" />
@@ -178,14 +121,12 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                             <Text style={styles.accessButtonText}>Acessar Plano</Text>
                         )}
                     </TouchableOpacity>
-
-                    {/* CustomAlertModal */}
                     <CustomAlertModal
                         isVisible={isAlertVisible}
                         title={alertTitle}
                         message={alertMessage}
                         onClose={hideAlert}
-                        type={alertType}
+                        type={'error'}
                     />
                 </View>
             </TouchableWithoutFeedback>
@@ -195,71 +136,15 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: '#000000' },
-    container: {
-        flex: 1,
-        paddingHorizontal: '5%',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerContainer: {
-        alignItems: 'center',
-        marginBottom: screenHeight * 0.05,
-    },
-    title: {
-        marginTop: 50,
-        fontSize: 28,
-        fontFamily: 'Fustat-Bold',
-        color: '#FFFFFF',
-        textAlign: 'center',
-    },
-    subtitle: {
-        fontSize: 18,
-        fontFamily: 'Fustat-Light',
-        color: '#FFFFFF',
-        lineHeight: 24,
-        textAlign: 'center',
-        maxWidth: '80%',
-    },
-    codeInputsRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        width: '100%',
-        marginBottom: 30,
-        alignItems: 'center',
-    },
-    codeInput: {
-        backgroundColor: '#333',
-        width: 35,
-        height: 50,
-        textAlign: 'center',
-        borderRadius: 8,
-        color: '#FFF',
-        fontSize: 24,
-        fontFamily: 'Fustat-Bold',
-        marginHorizontal: 2,
-        borderWidth: 1,
-        borderColor: '#444',
-    },
-    codeDash: {
-        color: '#FFF',
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginHorizontal: 2,
-    },
-    accessButton: {
-        backgroundColor: '#AEF359',
-        paddingVertical: 15,
-        paddingHorizontal: 30,
-        borderRadius: 30,
-        width: '80%',
-        alignItems: 'center',
-    },
-    accessButtonText: {
-        color: '#000',
-        fontSize: 18,
-        fontWeight: 'bold',
-        fontFamily: 'Fustat-Bold',
-    },
+    container: { flex: 1, paddingHorizontal: '5%', justifyContent: 'center', alignItems: 'center' },
+    headerContainer: { alignItems: 'center', marginBottom: screenHeight * 0.05 },
+    title: { marginTop: 50, fontSize: 28, fontFamily: 'Fustat-Bold', color: '#FFFFFF', textAlign: 'center' },
+    subtitle: { fontSize: 18, fontFamily: 'Fustat-Light', color: '#FFFFFF', lineHeight: 24, textAlign: 'center', maxWidth: '80%' },
+    codeInputsRow: { flexDirection: 'row', justifyContent: 'center', width: '100%', marginBottom: 30, alignItems: 'center' },
+    codeInput: { backgroundColor: '#333', width: 35, height: 50, textAlign: 'center', borderRadius: 8, color: '#FFF', fontSize: 16, fontFamily: 'Fustat-Bold', marginHorizontal: 2, borderWidth: 1, borderColor: '#444' },
+    codeDash: { color: '#FFF', fontSize: 24, fontWeight: 'bold', marginHorizontal: 2 },
+    accessButton: { backgroundColor: '#AEF359', paddingVertical: 15, paddingHorizontal: 30, borderRadius: 30, width: '80%', alignItems: 'center' },
+    accessButtonText: { color: '#000', fontSize: 18, fontWeight: 'bold', fontFamily: 'Fustat-Bold' },
 });
 
 export default NutricionistaAccessScreen;
