@@ -11,7 +11,7 @@ import CustomAlertModal from '../components/CustomAlertModal';
 
 const GerenciarInformacoesScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation(); // Adicionado o objeto i18n
 
   // Estados para os dados do usuário
   const [nome, setNome] = useState('');
@@ -23,8 +23,8 @@ const GerenciarInformacoesScreen: React.FC = () => {
   const [objetivo, setObjetivo] = useState<string | null>(null);
   const [nivelAtividade, setNivelAtividade] = useState<string | null>(null);
   const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState(''); // Nova senha
-  const [currentPassword, setCurrentPassword] = useState(''); // Senha atual para reautenticação
+  const [senha, setSenha] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
 
   // Estados para controlar a visibilidade dos campos de senha e do texto da senha
   const [showPasswordFields, setShowPasswordFields] = useState(false);
@@ -44,6 +44,9 @@ const GerenciarInformacoesScreen: React.FC = () => {
   const [senhaError, setSenhaError] = useState(false);
   const [currentPasswordError, setCurrentPasswordError] = useState(false);
 
+  // Estado para o idioma selecionado
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language);
+
   // Estados para loading e modal de alerta
   const [isLoading, setIsLoading] = useState(true);
   const [isAlertVisible, setIsAlertVisible] = useState(false);
@@ -62,7 +65,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
     setIsAlertVisible(false);
   }, []);
 
-  // Opções para os Pickers (Objetivo e Nível de Atividade)
+  // Opções para os Pickers (Objetivo, Nível de Atividade e Idioma)
   const objectiveOptions = [
     { label: t('cadastro.objectiveLoseWeight'), value: 'emagrecer' },
     { label: t('cadastro.objectiveGainMuscle'), value: 'ganhar_massa' },
@@ -76,6 +79,11 @@ const GerenciarInformacoesScreen: React.FC = () => {
     { label: t('cadastro.activityLevelIntense'), value: 'intenso' },
   ];
 
+  const languageOptions = [
+    { label: 'Português', value: 'pt' },
+    { label: 'English', value: 'en' },
+  ];
+
   // --- Carregar dados do usuário ao montar a tela ---
   useEffect(() => {
     const fetchUserData = async () => {
@@ -83,7 +91,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
       const user = auth.currentUser;
       if (!user) {
         showAlert(t('manageInfo.authErrorTitle'), t('manageInfo.notLoggedInMessage'), 'error');
-        setIsLoading(false); 
+        setIsLoading(false);
         navigation.goBack();
         return;
       }
@@ -122,7 +130,15 @@ const GerenciarInformacoesScreen: React.FC = () => {
     };
 
     fetchUserData();
-  }, [showAlert, navigation, t]); // Adicionado 't' às dependências
+  }, [showAlert, navigation, t]);
+
+  // Função para mudar o idioma
+  const handleLanguageChange = useCallback((lang: string) => {
+    if (lang) {
+      i18n.changeLanguage(lang);
+      setSelectedLanguage(lang);
+    }
+  }, [i18n]);
 
   // --- Funções de Validação ---
   const validateInputs = useCallback(() => {
@@ -153,7 +169,7 @@ const GerenciarInformacoesScreen: React.FC = () => {
     if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) { setEmailError(true); isValid = false; }
     
     // Lógica da senha agora depende de showPasswordFields
-    if (showPasswordFields) { // Apenas valida se os campos de senha estão visíveis
+    if (showPasswordFields) {
       if (!currentPassword.trim()) {
         setCurrentPasswordError(true);
         isValid = false;
@@ -170,10 +186,8 @@ const GerenciarInformacoesScreen: React.FC = () => {
         showAlert(t('manageInfo.weakPasswordTitle'), t('manageInfo.weakPasswordMessage'), 'error');
       }
     } else {
-        // Se os campos de senha não estão visíveis, mas o e-mail foi alterado,
-        // a senha atual ainda é necessária para reautenticação.
         const isEmailChanged = email !== (auth.currentUser?.email || '');
-        if (isEmailChanged && !currentPassword.trim()) { // Apenas exige se o email mudou
+        if (isEmailChanged && !currentPassword.trim()) {
             setCurrentPasswordError(true);
             isValid = false;
             showAlert(t('manageInfo.confirmationNeededTitle'), t('manageInfo.emailChangeRequiresCurrentPasswordMessage'), 'error');
@@ -202,7 +216,6 @@ const GerenciarInformacoesScreen: React.FC = () => {
       const isEmailChanged = email !== user.email;
       const isPasswordChanged = showPasswordFields && senha.length > 0;
 
-      // Reautenticação necessária se o e-mail for alterado OU se os campos de senha estiverem visíveis e uma nova senha for preenchida
       if (isEmailChanged || isPasswordChanged) {
         if (!currentPassword.trim()) {
             showAlert(t('manageInfo.errorTitle'), t('manageInfo.currentPasswordRequiredForChanges'), 'error');
@@ -213,17 +226,14 @@ const GerenciarInformacoesScreen: React.FC = () => {
         await reauthenticateWithCredential(user, credential);
       }
       
-      // Atualizar Email se mudou
       if (isEmailChanged) {
         await updateEmail(user, email);
       }
 
-      // Atualizar Senha se foi fornecida uma nova e os campos estavam visíveis
       if (isPasswordChanged) {
         await updatePassword(user, senha);
       }
 
-      // Atualizar dados no Firestore
       const userDocRef = doc(db, "usuarios", user.uid);
       await updateDoc(userDocRef, {
         nome: nome.trim(),
@@ -243,12 +253,11 @@ const GerenciarInformacoesScreen: React.FC = () => {
 
       showAlert(t('manageInfo.successTitle'), t('manageInfo.infoUpdatedMessage'), 'success');
       
-      // Limpar campos de senha e ocultá-los após sucesso
       setShowPasswordFields(false);
       setSenha('');
       setCurrentPassword('');
-      setShowCurrentPassword(false); // Resetar visibilidade do olho
-      setShowNewPassword(false); // Resetar visibilidade do olho
+      setShowCurrentPassword(false);
+      setShowNewPassword(false);
 
     } catch (error: any) {
       console.error("Erro ao salvar alterações:", error);
@@ -290,12 +299,10 @@ const GerenciarInformacoesScreen: React.FC = () => {
         const credential = EmailAuthProvider.credential(user.email!, passwordToReauthenticate);
         await reauthenticateWithCredential(user, credential);
 
-        // 1. Excluir dados do Firestore
         const userDocRef = doc(db, "usuarios", user.uid);
         await deleteDoc(userDocRef);
         console.log("Dados do usuário excluídos do Firestore.");
 
-        // 2. Excluir usuário do Firebase Auth
         await deleteUser(user);
         console.log("Usuário excluído do Firebase Auth.");
 
@@ -335,6 +342,18 @@ const GerenciarInformacoesScreen: React.FC = () => {
         <View>
           <Text style={styles.headerText}>{t('manageInfo.title')}</Text>
           <View style={styles.headerLine} />
+        </View>
+        {/* Adicionado o seletor de idioma */}
+        <View style={styles.languageSelectorContainer}>
+          <RNPickerSelect
+            onValueChange={handleLanguageChange}
+            value={selectedLanguage}
+            placeholder={{}}
+            items={languageOptions}
+            style={languagePickerStyles}
+            useNativeAndroidPickerStyle={false}
+            Icon={() => <Ionicons name="language" size={20} color="#AEF359" />}
+          />
         </View>
       </View>
 
@@ -553,14 +572,14 @@ const pickerSelectStyles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 10,
     color: '#FFF',
-    paddingRight: 30, // para garantir que o texto não se sobreponha ao ícone
+    paddingRight: 30,
   },
   inputAndroid: {
     fontSize: 15,
     paddingHorizontal: 10,
     paddingVertical: 8,
     color: '#FFF',
-    paddingRight: 30, // para garantir que o texto não se sobreponha ao ícone
+    paddingRight: 30,
   },
   iconContainer: {
     top: '50%',
@@ -571,6 +590,32 @@ const pickerSelectStyles = StyleSheet.create({
   placeholder: {
     color: '#888',
   },
+});
+
+const languagePickerStyles = StyleSheet.create({
+    inputIOS: {
+        fontSize: 14,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        color: '#AEF359',
+        paddingRight: 30,
+    },
+    inputAndroid: {
+        fontSize: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        color: '#AEF359',
+        paddingRight: 30,
+    },
+    iconContainer: {
+        top: '50%',
+        marginTop: -10,
+        right: 0,
+        position: 'absolute',
+    },
+    placeholder: {
+        color: '#AEF359',
+    },
 });
 
 const styles = StyleSheet.create({
@@ -595,8 +640,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between', // Altera a justificação
     marginBottom: 30,
-    gap: 10,
   },
   backButton: {
     marginTop: -4,
@@ -612,6 +657,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#82CD32',
     borderRadius: 2,
     width: 180,
+  },
+  languageSelectorContainer: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 12,
+    paddingRight: 12,
+    minWidth: 120,
   },
   card: {
     backgroundColor: '#121212',
@@ -756,4 +807,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default GerenciarInformacoesScreen; 
+export default GerenciarInformacoesScreen;

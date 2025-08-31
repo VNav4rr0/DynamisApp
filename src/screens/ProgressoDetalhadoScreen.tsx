@@ -17,8 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
 import { format, subMonths, subYears, isAfter, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'; // Adicionado startOfDay, endOfDay
-import { ptBR } from 'date-fns/locale';
-
+import { ptBR, enUS } from 'date-fns/locale';
 // --- Firebase Imports ---
 import { auth, db } from '../../firebaseConfig/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -87,7 +86,7 @@ const periodKeyMap = {
 
 // --- Componente ---
 const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigation }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [activePeriod, setActivePeriod] = useState<'1m' | '3m' | '6m' | '1a' | 'mais'>('1m');
 
     const [nutritionalGoals, setNutritionalGoals] = useState<UserNutritionalGoals | null>(null);
@@ -216,19 +215,26 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
         }
 
         // Filtra os logs de peso pelo período
-        for (const dateString of sortedDates) {
+            for (const dateString of sortedDates) {
+            const currentLocale = i18n.language === 'pt' ? ptBR : enUS;
             const logDate = parseISO(dateString);
             if (isAfter(logDate, startDate) || isSameDay(logDate, startDate)) {
                 const weightValue = dailyLogs[dateString].weight;
                 if (typeof weightValue === 'number' && !isNaN(weightValue)) {
                     filteredWeights.push(weightValue);
-                    // Usar 'dd/MM' para 1m, 'MMM' para mais de 1m, 'MMM/yy' para 1a+
+                    // Ajusta o formato de acordo com o idioma
                     if (activePeriod === '1m') {
-                        labels.push(format(logDate, 'dd/MM', { locale: ptBR }));
+                        labels.push(
+                            format(
+                                logDate,
+                                i18n.language === 'pt' ? 'dd/MM' : 'MM/dd',
+                                { locale: currentLocale }
+                            )
+                        );
                     } else if (activePeriod === '3m' || activePeriod === '6m') {
-                        labels.push(format(logDate, 'MMM', { locale: ptBR }));
+                        labels.push(format(logDate, 'MMM', { locale: currentLocale }));
                     } else {
-                        labels.push(format(logDate, 'MMM/yy', { locale: ptBR }));
+                        labels.push(format(logDate, 'MMM/yy', { locale: currentLocale }));
                     }
                 }
             }
@@ -236,31 +242,31 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
 
         // Adiciona a meta de peso como uma segunda linha, se houver dados de peso para plotar
         const datasets = [
-            {
-                data: filteredWeights,
-                color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
-                strokeWidth: 3,
-            }
-        ];
+        {
+            data: filteredWeights,
+            color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
+            strokeWidth: 3,
+        }
+    ];
 
         if (pesoMeta !== null && typeof pesoMeta === 'number' && filteredWeights.length > 0) {
             // A linha de meta só aparece se houver dados reais de peso para o período
             datasets.push({
                 data: Array(filteredWeights.length).fill(pesoMeta),
-                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`, // Linha branca para a meta
+                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                 strokeWidth: 1,
             });
         }
         
         // Se não houver dados de peso filtrados para o período, indica que está vazio
         if (filteredWeights.length === 0) {
-             return {
-                labels: [],
-                datasets: [{ data: [] }],
-                chartWidth: width * 0.9,
-                isEmpty: true
-            };
-        }
+        return {
+            labels: [],
+            datasets: [{ data: [] }],
+            chartWidth: width * 0.9,
+            isEmpty: true
+        };
+    }
 
         // Ajustar a largura do gráfico se houver muitos pontos
         // Mínimo 90% da tela, ou 50px por ponto para evitar amontoamento
@@ -327,7 +333,7 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
         return [
             { label: t('progress.proteins'), value: proteina, unit: 'g', percentage: calculatePercentage(proteina, 4), color: '#AEF359' },
             { label: t('progress.carbohydrates'), value: carboidratos, unit: 'g', percentage: calculatePercentage(carboidratos, 4), color: '#8BC34A' },
-            { label: 'progress.healthy_fats', value: gordura, unit: 'g', percentage: calculatePercentage(gordura, 9), color: '#689F38' },
+            { label: t('progress.healthy_fats'), value: gordura, unit: 'g', percentage: calculatePercentage(gordura, 9), color: '#689F38' },
         ];
     }, [nutritionalGoals, t]);
 
@@ -368,98 +374,97 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                 </View>
 
                 {/* Card Unificado de Progresso */}
-                <View style={styles.progressCard}>
+                    <View style={styles.progressCard}>
                     {isLoadingWeightData ? (
                         <ActivityIndicator size="large" color="#AEF359" style={{ marginVertical: 50 }} />
                     ) : errorLoadingWeightData ? (
                         <View style={styles.errorContainer}>
-                            <MaterialIcons name="error-outline" size={40} color="#C62828" />
-                            <Text style={styles.errorText}>{errorLoadingWeightData}</Text>
-                            <TouchableOpacity onPress={fetchWeightData} style={styles.retryButton}>
-                                <Text style={styles.retryButtonText}>Tentar Novamente</Text>
-                            </TouchableOpacity>
+                        <MaterialIcons name="error-outline" size={40} color="#C62828" />
+                        <Text style={styles.errorText}>{errorLoadingWeightData}</Text>
+                        <TouchableOpacity onPress={fetchWeightData} style={styles.retryButton}>
+                            <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+                        </TouchableOpacity>
                         </View>
                     ) : hasAnyWeightData === false ? ( // Caso não tenha NENHUM dado de peso
                         <View style={styles.noDataContainer}>
-                            <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
-                            <Text style={styles.noDataText}>Nenhum dado de peso encontrado.</Text>
-                            <Text style={styles.noDataText}>Registre seu peso diariamente na Home para ver sua evolução!</Text>
+                        <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                        <Text style={styles.noDataText}>{t('progress.no_weight_data')}</Text>
+                        <Text style={styles.noDataText}>{t('progress.register_weight_daily')}</Text>
                         </View>
                     ) : chartWeightData.isEmpty ? ( // Caso tenha dados gerais, mas não para o período selecionado
-                         <View style={styles.noDataContainer}>
-                            <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
-                            <Text style={styles.noDataText}>Nenhum dado de peso para o período selecionado.</Text>
-                            <Text style={styles.noDataText}>Tente outro período ou registre mais dados.</Text>
+                        <View style={styles.noDataContainer}>
+                        <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                        <Text style={styles.noDataText}>{t('progress.no_data_selected_period')}</Text>
+                        <Text style={styles.noDataText}>{t('progress.try_other_period')}</Text>
                         </View>
                     ) : (
                         <>
-                            {/* GRÁFICO COM SCROLL HORIZONTAL */}
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartScrollView}>
-                                <LineChart
-                                    data={{
-                                        labels: chartWeightData.labels,
-                                        datasets: chartWeightData.datasets,
-                                    }}
-                                    width={chartWeightData.chartWidth} // Largura dinâmica
-                                    height={230}
-                                    chartConfig={CHART_CONFIG}
-                                    bezier
-                                    style={styles.chart}
-                                    // fromZero // Remover fromZero se o peso não pode ser 0
-                                    withVerticalLabels
-                                    withHorizontalLabels
-                                    segments={5}
-                                />
-                            </ScrollView>
+                        {/* GRÁFICO COM SCROLL HORIZONTAL */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartScrollView}>
+                            <LineChart
+                            data={{
+                                labels: chartWeightData.labels,
+                                datasets: chartWeightData.datasets,
+                            }}
+                            width={chartWeightData.chartWidth} // Largura dinâmica
+                            height={230}
+                            chartConfig={CHART_CONFIG}
+                            bezier
+                            style={styles.chart}
+                            withVerticalLabels
+                            withHorizontalLabels
+                            segments={5}
+                            />
+                        </ScrollView>
 
-                            {/* Seção de Metas Alimentares (Macros) */}
-                            <View style={styles.divider} />
-                            {isLoadingMacros ? (
-                                <ActivityIndicator size="small" color="#AEF359" style={{ marginVertical: 20 }} />
-                            ) : errorLoadingMacros ? (
-                                <View style={styles.errorContainer}>
-                                    <MaterialIcons name="error-outline" size={30} color="#C62828" />
-                                    <Text style={styles.errorTextSmall}>{errorLoadingMacros}</Text>
-                                    <TouchableOpacity onPress={fetchNutritionalGoals} style={styles.retryButton}>
-                                        <Text style={styles.retryButtonText}>Tentar Novamente</Text>
-                                    </TouchableOpacity>
+                        {/* Seção de Metas Alimentares (Macros) */}
+                        <View style={styles.divider} />
+                        {isLoadingMacros ? (
+                            <ActivityIndicator size="small" color="#AEF359" style={{ marginVertical: 20 }} />
+                        ) : errorLoadingMacros ? (
+                            <View style={styles.errorContainer}>
+                            <MaterialIcons name="error-outline" size={30} color="#C62828" />
+                            <Text style={styles.errorTextSmall}>{errorLoadingMacros}</Text>
+                            <TouchableOpacity onPress={fetchNutritionalGoals} style={styles.retryButton}>
+                                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
+                            </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <>
+                            <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
+                            {translatedMetaAlimentar.length > 0 ? (
+                                translatedMetaAlimentar.map((item, index) => (
+                                <View key={index} style={styles.metaItem}>
+                                    <View style={styles.metaHeader}>
+                                    <View style={styles.metaLabelContainer}>
+                                        <View style={[styles.metaColorDot, { backgroundColor: item.color }]} />
+                                        <Text style={styles.metaText}>{item.label}</Text>
+                                    </View>
+                                    <Text style={styles.metaValueText}>{item.value}{item.unit}</Text>
+                                    </View>
+                                    <View style={styles.progressBarBackground}>
+                                    <View style={[styles.progressBarFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
+                                    </View>
                                 </View>
+                                ))
                             ) : (
-                                <>
-                                    <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
-                                    {translatedMetaAlimentar.length > 0 ? (
-                                        translatedMetaAlimentar.map((item, index) => (
-                                            <View key={index} style={styles.metaItem}>
-                                                <View style={styles.metaHeader}>
-                                                    <View style={styles.metaLabelContainer}>
-                                                        <View style={[styles.metaColorDot, { backgroundColor: item.color }]} />
-                                                        <Text style={styles.metaText}>{item.label}</Text>
-                                                    </View>
-                                                    <Text style={styles.metaValueText}>{item.value}{item.unit}</Text>
-                                                </View>
-                                                <View style={styles.progressBarBackground}>
-                                                    <View style={[styles.progressBarFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
-                                                </View>
-                                            </View>
-                                        ))
-                                    ) : (
-                                        <View style={styles.noDataContainer}>
-                                            <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
-                                            <Text style={styles.noDataText}>Nenhuma meta nutricional encontrada.</Text>
-                                            <Text style={styles.noDataText}>Complete seu cadastro para ver este progresso!</Text>
-                                            <TouchableOpacity
-                                                onPress={() => navigation.navigate('PerfilTab')}
-                                                style={styles.retryButton}
-                                            >
-                                                <Text style={styles.retryButtonText}>Definir Metas</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    )}
-                                </>
+                                <View style={styles.noDataContainer}>
+                                <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                                <Text style={styles.noDataText}>{t('progress.no_nutritional_goals')}</Text>
+                                <Text style={styles.noDataText}>{t('progress.complete_profile_to_see_progress')}</Text>
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('PerfilTab')}
+                                    style={styles.retryButton}
+                                >
+                                    <Text style={styles.retryButtonText}>{t('progress.define_goals')}</Text>
+                                </TouchableOpacity>
+                                </View>
                             )}
+                            </>
+                        )}
                         </>
                     )}
-                </View>
+                    </View>
             </ScrollView>
         </View>
     );

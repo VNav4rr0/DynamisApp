@@ -8,6 +8,7 @@ import { AuthStackParamList } from '../../App';
 import CustomAlertModal from '../components/CustomAlertModal';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig/firebase';
+import { useTranslation } from 'react-i18next';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -19,6 +20,8 @@ const TOTAL_DIGITABLE_INPUTS = 8;
 const PREFIX_CHARS_LENGTH = 3;
 
 const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ navigation, setClientSession }) => {
+    const { t } = useTranslation();
+
     const codeInputRefs = useRef<Array<TextInput | null>>([]);
     const [accessCodeParts, setAccessCodeParts] = useState<string[]>(Array(TOTAL_DIGITABLE_INPUTS).fill(''));
     const [isLoadingAccess, setIsLoadingAccess] = useState(false);
@@ -52,7 +55,7 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
     const handleAccessCodeVerify = async () => {
         const enteredChars = accessCodeParts.join('');
         if (enteredChars.length !== TOTAL_DIGITABLE_INPUTS) {
-            showAlert('Erro', `Por favor, preencha o código completo.`);
+            showAlert(t('common.error'), t('nutricionista.enter_full_code'));
             return;
         }
 
@@ -75,14 +78,14 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
 
                 setClientSession({
                     clientUid: clientUID,
-                    clientName: clientData.nome || 'Cliente',
+                    clientName: clientData.nome || t('common.client'),
                 });
             } else {
-                showAlert('Erro', 'Código de acesso inválido ou não encontrado.');
+                showAlert(t('common.error'), t('nutricionista.invalid_code'));
             }
         } catch (error) {
             console.error("Erro ao verificar código:", error);
-            showAlert('Erro', 'Ocorreu um erro ao verificar o código. Tente novamente.');
+            showAlert(t('common.error'), t('nutricionista.code_verification_failed'));
         } finally {
             setIsLoadingAccess(false);
         }
@@ -93,10 +96,8 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <View style={styles.container}>
                     <View style={styles.headerContainer}>
-                        <Text style={styles.title}>Acesso Nutricionista</Text>
-                        <Text style={styles.subtitle}>
-                            Insira o código de partilha do seu cliente para gerenciar o plano.
-                        </Text>
+                        <Text style={styles.title}>{t('nutricionista.title')}</Text>
+                        <Text style={styles.subtitle}>{t('nutricionista.subtitle')}</Text>
                     </View>
                     <View style={styles.codeInputsRow}>
                         {Array.from({ length: TOTAL_DIGITABLE_INPUTS }).map((_, index) => (
@@ -118,7 +119,7 @@ const NutricionistaAccessScreen: React.FC<NutricionistaAccessScreenProps> = ({ n
                         {isLoadingAccess ? (
                             <ActivityIndicator size="small" color="#000" />
                         ) : (
-                            <Text style={styles.accessButtonText}>Acessar Plano</Text>
+                            <Text style={styles.accessButtonText}>{t('nutricionista.access_plan')}</Text>
                         )}
                     </TouchableOpacity>
                     <CustomAlertModal

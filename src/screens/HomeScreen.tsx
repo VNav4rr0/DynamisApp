@@ -1,4 +1,4 @@
-// src/screens/HomeScreen.tsx
+// HomeScreen.tsx
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
@@ -22,13 +22,13 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { format, isToday, isYesterday, parseISO, startOfWeek, addDays, isSameDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next'; // <-- Already there
 
 // --- Firebase Imports ---
 import { auth, db } from '../../firebaseConfig/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useIsFocused } from '@react-navigation/native';
-
+import { ptBR } from 'date-fns/locale';
 
 // Certifique-se de que o caminho abaixo está correto e aponta para o seu componente personalizado
 import CustomAlertModal from '../components/CustomAlertModal'; // Importando o CustomAlertModal
@@ -88,6 +88,8 @@ const DayButton: React.FC<DayButtonProps> = ({ day, label, isActive, isCompleted
 
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
+    const { t } = useTranslation();
+
     const [currentDayIndex, setCurrentDayIndex] = useState<number>(new Date().getDay());
     const [currentStreak, setCurrentStreak] = useState<number>(0);
     const [completedDays, setCompletedDays] = useState<string[]>([]);
@@ -110,20 +112,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
     const isFocused = useIsFocused();
 
+    // Use translations for motivational phrases
     const motivationalPhrases = [
-        "Continue firme, cada dia conta!",
-        "Você está mais perto do seu objetivo!",
-        "A disciplina te leva longe!",
+        t('home.motivationalPhrases.phrase1'),
+        t('home.motivationalPhrases.phrase2'),
+        t('home.motivationalPhrases.phrase3'),
     ];
 
     const days = [
-        { day: 'Dom', label: 'Dom' },
-        { day: 'Seg', label: 'Seg' },
-        { day: 'Ter', label: 'Ter' },
-        { day: 'Qua', label: 'Qua' },
-        { day: 'Qui', label: 'Qui' },
-        { day: 'Sex', label: 'Sex' },
-        { day: 'Sab', label: 'Sab' },
+        { day: 'Dom', label: t('home.days.sun') },
+        { day: 'Seg', label: t('home.days.mon') },
+        { day: 'Ter', label: t('home.days.tue') },
+        { day: 'Qua', label: t('home.days.wed') },
+        { day: 'Qui', label: t('home.days.thu') },
+        { day: 'Sex', label: t('home.days.fri') },
+        { day: 'Sab', label: t('home.days.sat') },
     ];
 
     const showAlert = useCallback((title: string, message: string, type: 'success' | 'error' = 'error') => {
@@ -198,13 +201,13 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 setCurrentDayIndex(new Date().getDay());
             }
         } catch (error: any) {
-            setErrorLoadingStreak("Erro ao carregar sua sequência. Verifique sua conexão e tente novamente.");
+            setErrorLoadingStreak(t('home.errorLoadingStreak'));
             setCurrentStreak(0);
             setCompletedDays([]);
         } finally {
             setIsLoadingStreak(false);
         }
-    }, [showAlert]);
+    }, [showAlert, t]);
 
     const saveStreakAndDailyLogData = useCallback(async (
         newStreak: number, 
@@ -213,7 +216,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     ) => {
         const user = auth.currentUser;
         if (!user) {
-            showAlert("Erro", "Você precisa estar logado para salvar seu progresso.");
+            showAlert(t('home.alertErrorTitle'), t('home.alertLoginRequired'));
             return;
         }
         const todayDateISO = format(new Date(), 'yyyy-MM-dd');
@@ -228,11 +231,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 streakData: updatedStreakData,
                 [`dailyLogs.${todayDateISO}`]: dailyLogData
             });
-            showAlert("Sucesso", "Seu progresso foi salvo!", 'success');
+            showAlert(t('home.alertSuccessTitle'), t('home.alertProgressSaved'), 'success');
         } catch (error: any) {
-            showAlert("Erro", "Não foi possível salvar seu progresso. Tente novamente.");
+            showAlert(t('home.alertErrorTitle'), t('home.alertSaveError'));
         }
-    }, [showAlert]);
+    }, [showAlert, t]);
 
 
     useEffect(() => {
@@ -271,7 +274,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
         const user = auth.currentUser;
         if (!user) {
-            showAlert("Erro", "Você precisa estar logado para salvar seu progresso.");
+            showAlert(t('home.alertErrorTitle'), t('home.alertLoginRequired'));
             handleCloseModal();
             return;
         }
@@ -281,7 +284,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         const parsedWater = parseFloat(water);
 
         if (isNaN(parsedCalories) || isNaN(parsedWeight) || isNaN(parsedWater)) {
-            showAlert("Erro de Validação", "Por favor, insira valores numéricos válidos para Calorias, Peso e Água.");
+            showAlert(t('home.alertValidationErrorTitle'), t('home.alertValidationErrorMessage'));
             return;
         }
 
@@ -297,7 +300,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             const lastDate = lastDateISO ? parseISO(lastDateISO) : null;
             
             if (lastDate && isToday(lastDate)) {
-                // Já completou hoje, apenas atualiza dados diários
+                // Already completed today, just update daily data
             } else if (lastDate && isYesterday(lastDate)) {
                 newStreak += 1;
             } else {
@@ -325,7 +328,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             await saveStreakAndDailyLogData(newStreak, newCompletedDays, dailyLogData);
 
         } catch (error) {
-            showAlert("Erro ao Salvar", "Não foi possível salvar seu progresso. Tente novamente.");
+            showAlert(t('home.alertSaveErrorTitle'), t('home.alertSaveError'));
         } finally {
             handleCloseModal();
         }
@@ -339,7 +342,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     };
 
  
-
     return (
         <View style={styles.rootContainer}>
             <StatusBar barStyle="light-content" />
@@ -349,14 +351,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     <TouchableWithoutFeedback>
                         <View style={styles.modalContent}>
                             <View style={styles.modalGrabber} />
-                            <Text style={styles.modalTitle}>Atualize seu Progresso</Text>
+                            <Text style={styles.modalTitle}>{t('home.modal.title')}</Text>
                             <Text style={styles.modalSubtitle}>{modalSubtitle}</Text>
                             
                             <View style={styles.inputContainer}>
                                 <MaterialCommunityIcons name="fire" size={22} color="#888" style={styles.inputIcon} />
                                 <TextInput 
                                     style={styles.inputField} 
-                                    placeholder="Calorias consumidas (kcal)" 
+                                    placeholder={t('home.modal.caloriesPlaceholder')} 
                                     placeholderTextColor="#888" 
                                     keyboardType="numeric" 
                                     value={calories} 
@@ -367,7 +369,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                 <MaterialCommunityIcons name="scale-bathroom" size={22} color="#888" style={styles.inputIcon} />
                                 <TextInput 
                                     style={styles.inputField} 
-                                    placeholder="Seu peso de hoje (kg)" 
+                                    placeholder={t('home.modal.weightPlaceholder')} 
                                     placeholderTextColor="#888" 
                                     keyboardType="decimal-pad" 
                                     value={weight} 
@@ -378,7 +380,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                                 <MaterialIcons name="water-drop" size={22} color="#888" style={styles.inputIcon} />
                                 <TextInput 
                                     style={styles.inputField} 
-                                    placeholder="Água ingerida (L)" 
+                                    placeholder={t('home.modal.waterPlaceholder')} 
                                     placeholderTextColor="#888" 
                                     keyboardType="decimal-pad" 
                                     value={water} 
@@ -388,10 +390,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             
                             <View style={styles.modalButtonContainer}>
                                 <TouchableOpacity style={styles.modalButtonSave} onPress={handleSaveData}>
-                                    <Text style={styles.modalButtonTextSave}>Salvar Progresso</Text>
+                                    <Text style={styles.modalButtonTextSave}>{t('home.modal.saveButton')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.modalButtonCancel} onPress={handleCloseModal}>
-                                    <Text style={styles.modalButtonTextCancel}>Cancelar</Text>
+                                    <Text style={styles.modalButtonTextCancel}>{t('home.modal.cancelButton')}</Text>
                                 </TouchableOpacity>
                             </View>
 
@@ -414,10 +416,10 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     </View>
                     <View style={styles.heroContent}>
                         <Text style={styles.mainText}>
-                            Cada passo te aproxima
+                            {t('home.hero.line1')}
                         </Text>
                         <Text style={[styles.mainText, styles.highlightText]}>
-                            do seu objetivo!
+                            {t('home.hero.line2')}
                         </Text>
                     </View>
                 </ImageBackground>
@@ -425,7 +427,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                 <View style={styles.contentAfterHero}>
                     <View style={styles.card}>
                         <View style={styles.cardHeader}>
-                            <Text style={styles.cardTitle}>Sua Sequência</Text>
+                            <Text style={styles.cardTitle}>{t('home.card.title')}</Text>
                             {isLoadingStreak ? (
                                 <ActivityIndicator size="small" color="#FFA726" />
                             ) : errorLoadingStreak ? (
@@ -461,7 +463,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             style={styles.primaryButton}
                         >
                             <MaterialCommunityIcons name="check-circle-outline" size={24} color="#121212" />
-                            <Text style={styles.primaryButtonText}>Confirmar Meta Diária</Text>
+                            <Text style={styles.primaryButtonText}>{t('home.primaryButtonText')}</Text>
                         </LinearGradient>
                     </TouchableOpacity>
                     
@@ -470,8 +472,8 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                             <MaterialIcons name="workspace-premium" size={28} color="#9ACD32" />
                         </View>
                         <View style={styles.secondaryCardTextContainer}>
-                            <Text style={styles.secondaryCardTitle}>Acompanhamento Profissional</Text>
-                            <Text style={styles.secondaryCardSubtitle}>Vincule seu mentor para potencializar seus resultados.</Text>
+                            <Text style={styles.secondaryCardTitle}>{t('home.secondaryCard.title')}</Text>
+                            <Text style={styles.secondaryCardSubtitle}>{t('home.secondaryCard.subtitle')}</Text>
                         </View>
                         <MaterialIcons name="chevron-right" size={28} color="#555" />
                     </TouchableOpacity>
@@ -488,6 +490,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
     );
 };
+
 
 // Estilos Completos para a Tela
 const styles = StyleSheet.create({

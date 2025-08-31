@@ -4,10 +4,13 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions } from '
 import { MaterialIcons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import *as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+    const { t } = useTranslation();
+    
     const totalNavbarContentWidth = width - 40; 
     const navButtonWidth = totalNavbarContentWidth / state.routes.length; 
     const indicatorWidth = navButtonWidth - 10;
@@ -19,16 +22,16 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigat
         let textLabel: string = '';
 
         if (routeName === 'HomeTab') {
-            iconName = 'home';
-            textLabel = 'Home';
-        } else if (routeName === 'ProgressoDetalhadoTab') {
-            iconName = 'insights';
-            textLabel = 'Metas';
-        } else if (routeName === 'PerfilTab') {
-            iconName = 'person';
-            textLabel = 'Perfil';
-        }
-        return { iconName, textLabel };
+        iconName = 'home';
+        textLabel = t('navbar.home'); // usar chave i18n
+    } else if (routeName === 'ProgressoDetalhadoTab') {
+        iconName = 'insights';
+        textLabel = t('navbar.progress'); // usar chave i18n
+    } else if (routeName === 'PerfilTab') {
+        iconName = 'person';
+        textLabel = t('navbar.profile'); // usar chave i18n
+    }
+    return { iconName, textLabel };
     };
 
     useEffect(() => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -10,6 +11,8 @@ interface TermsModalProps {
 }
 
 const TermsModal: React.FC<TermsModalProps> = ({ isVisible, onAccept, onDecline }) => {
+  const { t } = useTranslation();
+
   return (
     <Modal
       transparent={true}
@@ -19,35 +22,31 @@ const TermsModal: React.FC<TermsModalProps> = ({ isVisible, onAccept, onDecline 
     >
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
-          <Text style={styles.title}>Termos</Text>
+          <Text style={styles.title}>{t('terms.title')}</Text>
 
           <View style={styles.contentScrollView}>
             <ScrollView>
-                <Text style={styles.paragraph}>
-                    Ao aceitar, você concorda que os cálculos nutricionais fornecidos por este aplicativo são estimativas e servem como uma referência inicial.
-                </Text>
-                <Text style={styles.subTitle}>Origem das Fórmulas</Text>
-                <Text style={styles.paragraph}>
-                    <Text style={styles.bold}>1. Taxa Metabólica Basal (TMB):</Text> Utilizamos a equação de Mifflin-St Jeor, considerada uma das mais precisas para estimar as calorias que seu corpo queima em repouso.
-                </Text>
-                <Text style={styles.paragraph}>
-                    <Text style={styles.bold}>2. Gasto Energético Total (GET):</Text> Sua TMB é multiplicada por um Fator de Atividade (baseado no nível que você selecionou: leve, moderado ou intenso) para estimar seu gasto calórico diário total.
-                </Text>
-                <Text style={styles.paragraph}>
-                    As metas de calorias e macronutrientes são ajustadas a partir do seu GET para se alinharem ao seu objetivo (emagrecer, manter ou ganhar massa).
-                </Text>
-                <Text style={styles.disclaimer}>
-                    <Text style={styles.bold}>Importante:</Text> Consulte um profissional para criar seu plano alimentar personalizado e conecte-o à sua conta para turbinar a performance do app.
-                </Text>
+              <Text style={styles.paragraph}>{t('terms.disclaimer')}</Text>
+              <Text style={styles.subTitle}>{t('terms.section1Title')}</Text>
+              <Text style={styles.paragraph}>
+                <Text style={styles.bold}>1. {t('terms.section1Text1Heading')}</Text> {t('terms.section1Text1')}
+              </Text>
+              <Text style={styles.paragraph}>
+                <Text style={styles.bold}>2. {t('terms.section1Text2Heading')}</Text> {t('terms.section1Text2')}
+              </Text>
+              <Text style={styles.paragraph}>{t('terms.section1Text3')}</Text>
+              <Text style={styles.disclaimer}>
+                <Text style={styles.bold}>{t('terms.importantNote')}</Text> {t('terms.professionalAdvice')}
+              </Text>
             </ScrollView>
           </View>
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity onPress={onDecline} style={styles.declineButton}>
-                <Text style={styles.declineButtonText}>Recusar</Text>
+              <Text style={styles.declineButtonText}>{t('terms.declineButton')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={onAccept} style={styles.acceptButton}>
-                <Text style={styles.acceptButtonText}>Aceitar e Finalizar</Text>
+              <Text style={styles.acceptButtonText}>{t('terms.acceptButton')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -80,7 +79,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   contentScrollView: {
-    maxHeight: screenWidth * 0.7, 
+    maxHeight: screenWidth * 0.7,
     marginBottom: 24,
   },
   subTitle: {
