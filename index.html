@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentos Legais - Dynamis App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2ecc71; 
+            --background-dark: #1a1a1a;
+            --surface-dark: #2c2c2c;
+            --text-light: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --border-color: #444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            background-color: var(--background-dark);
+            color: var(--text-light);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--surface-dark);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            font-size: 28px;
+        }
+
+        nav {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        nav a:hover {
+            background-color: rgba(46, 204, 113, 0.2); 
+            color: var(--primary-color);
+        }
+
+        nav a.active {
+            background-color: var(--primary-color);
+            color: var(--background-dark); 
+        }
+
+        main {
+            background-color: var(--surface-dark);
+            padding: 30px;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+        }
+
+        main section {
+            display: none; 
+        }
+        
+        main section.active {
+            display: block;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        h3 {
+            color: var(--text-light);
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+
+        p, li {
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+        
+        strong {
+            color: var(--text-light); 
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1>Dynamis App</h1>
+            <nav>
+                <a href="#" class="active" data-target="termos">Termos de Uso</a>
+                <a href="#" data-target="privacidade">Política de Privacidade</a>
+                <a href="#" data-target="diretrizes">Diretrizes da Comunidade</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="termos" class="active">
+            <h2>Termos e Condições de Uso</h2>
+            <p><strong>Data de Vigência:</strong> 6 de setembro de 2025</p>
+            <p>Bem-vindo ao Dynamis! Estes Termos de Uso governam seu acesso e uso do nosso aplicativo. Ao usar o Dynamis, você concorda em se vincular a estes Termos.</p>
+            
+            <h3>1. AVISO IMPORTANTE SOBRE SAÚDE</h3>
+            <p>O Dynamis NÃO FORNECE ACONSELHAMENTO MÉDICO. O serviço é apenas para fins informativos. Consulte sempre um profissional de saúde qualificado (médico ou nutricionista) antes de fazer alterações em sua dieta ou estilo de vida.</p>
+            
+            <h3>2. Conta do Usuário</h3>
+            <p>Você é responsável pela segurança de sua conta e por todas as atividades que nela ocorram. As informações fornecidas devem ser precisas e sua conta é pessoal e intransferível.</p>
+
+            <h3>3. Propriedade Intelectual</h3>
+            <p>Todo o conteúdo e funcionalidades do aplicativo são de nossa propriedade e protegidos por leis de direitos autorais.</p>
+
+            <h3>4. Contato</h3>
+            <p>Se tiver dúvidas sobre estes Termos, entre em contato: <strong>contato@dynamisapp.com</strong></p>
+        </section>
+
+        <section id="privacidade">
+            <h2>Política de Privacidade</h2>
+            <p><strong>Data de Vigência:</strong> 6 de setembro de 2025</p>
+            <p>Sua privacidade é nossa prioridade. Esta política descreve quais informações coletamos e como as usamos.</p>
+            
+            <h3>1. Informações que Coletamos</h3>
+            <p>Coletamos informações que você nos fornece (dados de cadastro, perfil e saúde) e informações automáticas (dados de uso e do dispositivo).</p>
+            
+            <h3>2. Como Usamos Suas Informações</h3>
+            <p>Usamos seus dados para operar e melhorar o serviço, personalizar sua experiência e garantir a segurança. Nós não vendemos suas informações pessoais.</p>
+            
+            <h3>3. Seus Direitos (LGPD)</h3>
+            <p>Você tem o direito de acessar, corrigir e excluir seus dados. Você pode gerenciar suas informações nas configurações do app ou entrando em contato conosco.</p>
+
+            <h3>4. Contato</h3>
+            <p>Se tiver dúvidas sobre esta Política, entre em contato: <strong>dynamis.appmobile@gmail.com</strong></p>
+        </section>
+
+        <section id="diretrizes">
+            <h2>Diretrizes da Nossa Comunidade Dynamis</h2>
+            <p>Olá! Para garantir que nossa comunidade seja um espaço seguro e positivo, criamos algumas diretrizes simples.</p>
+
+            <h3>🍏 Nossa Regra de Ouro: Empatia</h3>
+            <p>Lembre-se que cada pessoa tem uma jornada única. Seja gentil, ofereça apoio e celebre o progresso dos outros.</p>
+
+            <h3>🚫 O que não é legal por aqui:</h3>
+            <ul>
+                <li><strong>Nada de Conselhos Médicos:</strong> Esta é a regra mais importante. Não prescreva dietas ou dê diagnósticos. Incentive a busca por profissionais.</li>
+                <li><strong>Proibido Conteúdo Nocivo:</strong> Não permitimos conteúdo que promova distúrbios alimentares ou comportamentos autodestrutivos.</li>
+                <li><strong>Sem Julgamentos ou Body Shaming:</strong> Comentários negativos sobre o corpo, peso ou aparência de outras pessoas não serão tolerados.</li>
+                <li><strong>Assédio e Discurso de Ódio:</strong> Qualquer forma de ataque pessoal ou preconceito resultará em banimento.</li>
+            </ul>
+
+            <p>Obrigado por nos ajudar a construir uma comunidade inspiradora!</p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 Dynamis App. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('nav a');
+            const contentSections = document.querySelectorAll('main section');
+
+            function showSection(targetId) {
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                });
+
+                document.getElementById(targetId).classList.add('active');
+                document.querySelector(`nav a[data-target="${targetId}"]`).classList.add('active');
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const targetId = this.getAttribute('data-target');
+                    showSection(targetId);
+                });
+            });
+
+            showSection('termos');
+        });
+    </script>
+
+</body>
+</html>
