@@ -1,15 +1,14 @@
 {
   "expo": {
-    "name": "DynamisApp",
-    "slug": "DynamisApp",
+    "name": "Dynamis",
+    "slug": "Dynamis",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Vector.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/Vector.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "image": "./assets/icon.png",
+      "resizeMode": "contain"
     },
     "ios": {
       "supportsTablet": true
@@ -17,8 +16,7 @@
     "android": {
       "adaptiveIcon": {
         "googleServicesFile": "./google-services.json",
-        "foregroundImage": "./assets/Vector.png",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/icon.png"
       },
       "edgeToEdgeEnabled": true,
       "androidNavigationBar": {
@@ -28,11 +26,16 @@
       "package": "com.vn777.DynamisApp"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
       "expo-font",
       "expo-localization"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "041154f1-24ef-4cb0-a03f-ea23458379f6"
+      }
+    }
   }
 }

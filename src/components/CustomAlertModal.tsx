@@ -7,7 +7,7 @@ interface CustomAlertModalProps {
   title: string;
   message: string;
   onClose: () => void;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'info';
 }
 
 const CustomAlertModal: React.FC<CustomAlertModalProps> = ({ isVisible, title, message, onClose, type }) => {
