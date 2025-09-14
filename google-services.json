@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "441186452486",
+    "project_id": "dynamis-85157",
+    "storage_bucket": "dynamis-85157.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:441186452486:android:6a3da26a1857f0c77caf87",
+        "android_client_info": {
+          "package_name": "com.company.dynamis"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-NTPXLrJe8KgR1coj1J6z1camNeTwSNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

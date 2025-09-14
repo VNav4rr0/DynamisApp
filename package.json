@@ -9,16 +9,16 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/cli": "^19.1.1",
     "@react-native-firebase/app": "^22.2.1",
     "@react-native-firebase/firestore": "^22.2.1",
-    "@react-native-picker/picker": "^2.11.1",
+    "@react-native-picker/picker": "^2.11.2",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/native-stack": "^6.9.26",
     "date-fns": "^4.1.0",
-    "expo": "^53.0.20",
+    "expo": "53.0.22",
     "expo-blur": "~14.1.5",
     "expo-font": "~13.3.1",
     "expo-haptics": "~14.1.4",
@@ -26,7 +26,7 @@
     "expo-localization": "~16.1.5",
     "expo-splash-screen": "^0.30.10",
     "expo-status-bar": "~2.2.3",
-    "expo-system-ui": "~5.0.9",
+    "expo-system-ui": "~5.0.11",
     "i18next": "^23.11.5",
     "lucide-react": "^0.523.0",
     "metro": "^0.82.4",
@@ -36,12 +36,11 @@
     "react-native-chart-kit": "^6.12.0",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-paper": "^5.12.3",
-    "react-native-picker": "^4.3.7",
     "react-native-picker-select": "^9.1.3",
-    "react-native-reanimated": "~3.17.4",
+    "react-native-reanimated": "^3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
-    "react-native-svg": "15.11.2",
+    "react-native-svg": "^15.11.2",
     "react-native-vector-icons": "^10.1.0"
   },
   "devDependencies": {
@@ -50,5 +49,14 @@
     "@types/react-native-vector-icons": "^6.4.18",
     "typescript": "~5.8.3"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-chart-kit"
+        ]
+      }
+    }
+  }
 }

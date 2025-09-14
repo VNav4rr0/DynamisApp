@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -6,17 +6,15 @@ import {
     TouchableOpacity,
     Dimensions,
     ScrollView,
-    Animated,
     StatusBar,
     ActivityIndicator,
-    Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LineChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-chart-kit'; // Importação correta
 import { useTranslation } from 'react-i18next';
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { LinearGradient } from 'expo-linear-gradient';
-import { format, subMonths, subYears, isAfter, isSameDay, parseISO, startOfDay, endOfDay } from 'date-fns'; // Adicionado startOfDay, endOfDay
+import { format, subMonths, subYears, isAfter, isSameDay, parseISO, startOfDay } from 'date-fns';
 import { ptBR, enUS } from 'date-fns/locale';
 // --- Firebase Imports ---
 import { auth, db } from '../../firebaseConfig/firebase';
@@ -71,8 +69,6 @@ const CHART_CONFIG = {
     },
     fillShadowGradient: '#AEF359',
     fillShadowGradientOpacity: 0.2,
-    yAxisLabel: 'kg',
-    formatYLabel: (yLabel: string) => parseFloat(yLabel).toFixed(1),
 };
 
 const PERIODS: Array<'1m' | '3m' | '6m' | '1a' | 'mais'> = ['1m', '3m', '6m', '1a', 'mais'];
@@ -98,7 +94,6 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
     const [isLoadingWeightData, setIsLoadingWeightData] = useState(true);
     const [errorLoadingWeightData, setErrorLoadingWeightData] = useState<string | null>(null);
     
-    // NOVO ESTADO: Para saber se há algum dado de peso no geral
     const [hasAnyWeightData, setHasAnyWeightData] = useState(false); 
 
 
@@ -153,20 +148,18 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
             if (userDocSnap.exists()) {
                 const userData = userDocSnap.data();
                 
-                // Carregar dailyLogs
                 if (userData.dailyLogs && Object.keys(userData.dailyLogs).length > 0) {
                     setDailyLogs(userData.dailyLogs as Record<string, DailyLogEntry>);
-                    setHasAnyWeightData(true); // Marca que há dados de peso
+                    setHasAnyWeightData(true); 
                 } else {
-                    setDailyLogs({}); // Inicializa como objeto vazio se não houver logs
-                    setHasAnyWeightData(false); // Nenhhum dado de peso
+                    setDailyLogs({}); 
+                    setHasAnyWeightData(false);
                 }
 
-                // Carregar peso meta
                 if (userData.metas && userData.metas.pesoMeta) {
                     setPesoMeta(Number(userData.metas.pesoMeta));
                 } else {
-                    setPesoMeta(null); // Nenhuma meta de peso
+                    setPesoMeta(null);
                 }
             } else {
                 setErrorLoadingWeightData("Seu perfil não foi encontrado. Faça login novamente.");
@@ -186,101 +179,64 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
         fetchWeightData();
     }, [fetchNutritionalGoals, fetchWeightData]);
 
-    // Processamento de dados para o gráfico de peso
     const chartWeightData = useMemo(() => {
-        // Se não há dados, retorna um estado de gráfico vazio
         if (!dailyLogs || Object.keys(dailyLogs).length === 0) {
             return {
                 labels: [],
                 datasets: [{ data: [] }],
-                chartWidth: width * 0.9,
-                isEmpty: true // Marcador para indicar que não há dados para o gráfico
+                isEmpty: true
             };
         }
 
         const sortedDates = Object.keys(dailyLogs).sort();
-        let filteredWeights: number[] = [];
-        let labels: string[] = [];
+        const filteredData: { date: Date; weight: number }[] = [];
         let startDate: Date;
+        const today = startOfDay(new Date());
 
-        const today = startOfDay(new Date()); // Usar o início do dia para consistência
-
-        // Define a data de início com base no período selecionado
         switch (activePeriod) {
             case '1m': startDate = startOfDay(subMonths(today, 1)); break;
             case '3m': startDate = startOfDay(subMonths(today, 3)); break;
             case '6m': startDate = startOfDay(subMonths(today, 6)); break;
             case '1a': startDate = startOfDay(subYears(today, 1)); break;
-            case 'mais': startDate = new Date(0); break; // Começa de uma data bem antiga
+            default: startDate = new Date(0); break;
         }
 
-        // Filtra os logs de peso pelo período
-            for (const dateString of sortedDates) {
-            const currentLocale = i18n.language === 'pt' ? ptBR : enUS;
+        for (const dateString of sortedDates) {
             const logDate = parseISO(dateString);
             if (isAfter(logDate, startDate) || isSameDay(logDate, startDate)) {
                 const weightValue = dailyLogs[dateString].weight;
                 if (typeof weightValue === 'number' && !isNaN(weightValue)) {
-                    filteredWeights.push(weightValue);
-                    // Ajusta o formato de acordo com o idioma
-                    if (activePeriod === '1m') {
-                        labels.push(
-                            format(
-                                logDate,
-                                i18n.language === 'pt' ? 'dd/MM' : 'MM/dd',
-                                { locale: currentLocale }
-                            )
-                        );
-                    } else if (activePeriod === '3m' || activePeriod === '6m') {
-                        labels.push(format(logDate, 'MMM', { locale: currentLocale }));
-                    } else {
-                        labels.push(format(logDate, 'MMM/yy', { locale: currentLocale }));
-                    }
+                    filteredData.push({ date: logDate, weight: weightValue });
                 }
             }
         }
-
-        // Adiciona a meta de peso como uma segunda linha, se houver dados de peso para plotar
-        const datasets = [
-        {
-            data: filteredWeights,
-            color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
-            strokeWidth: 3,
-        }
-    ];
-
-        if (pesoMeta !== null && typeof pesoMeta === 'number' && filteredWeights.length > 0) {
-            // A linha de meta só aparece se houver dados reais de peso para o período
-            datasets.push({
-                data: Array(filteredWeights.length).fill(pesoMeta),
-                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                strokeWidth: 1,
-            });
-        }
         
-        // Se não houver dados de peso filtrados para o período, indica que está vazio
-        if (filteredWeights.length === 0) {
-        return {
-            labels: [],
-            datasets: [{ data: [] }],
-            chartWidth: width * 0.9,
-            isEmpty: true
-        };
-    }
-
-        // Ajustar a largura do gráfico se houver muitos pontos
-        // Mínimo 90% da tela, ou 50px por ponto para evitar amontoamento
-        const chartWidth = Math.max(width * 0.9 - 40, labels.length * 50); // -40 para padding do card
-
-        return { labels, datasets, chartWidth, isEmpty: false };
-
-    }, [dailyLogs, pesoMeta, activePeriod, width]); // Dependências
-
-    // Verifica se há dados de peso para um período específico
-    const hasDataForPeriod = useCallback((period: '1m' | '3m' | '6m' | '1a' | 'mais') => {
-        if (!dailyLogs || Object.keys(dailyLogs).length === 0) {
-            return false;
+        if (filteredData.length === 0) {
+             return { labels: [], datasets: [{ data: [] }], isEmpty: true };
         }
+
+        // Simplifica as labels para evitar sobreposição
+        const labels = filteredData.map((data, index) => {
+            if(filteredData.length > 10 && index % Math.floor(filteredData.length / 5) !== 0) {
+                return ''; // Mostra apenas algumas labels se houver muitos dados
+            }
+             const currentLocale = i18n.language === 'pt' ? ptBR : enUS;
+             return format(data.date, 'dd/MM', { locale: currentLocale });
+        });
+
+        const datasets = [{
+            data: filteredData.map(d => d.weight),
+            color: (opacity = 1) => `rgba(174, 243, 89, ${opacity})`,
+            strokeWidth: 3
+        }];
+
+        return { labels, datasets, isEmpty: false };
+
+    }, [dailyLogs, activePeriod, i18n.language]);
+
+    const hasDataForPeriod = useCallback((period: '1m' | '3m' | '6m' | '1a' | 'mais') => {
+        if (!dailyLogs || Object.keys(dailyLogs).length === 0) return false;
+        
         let startDate: Date;
         const today = startOfDay(new Date());
 
@@ -289,35 +245,26 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
             case '3m': startDate = startOfDay(subMonths(today, 3)); break;
             case '6m': startDate = startOfDay(subMonths(today, 6)); break;
             case '1a': startDate = startOfDay(subYears(today, 1)); break;
-            case 'mais': startDate = new Date(0); break;
+            default: startDate = new Date(0); break;
         }
 
-        // Verifica se existe ao menos um log de peso após a data de início
-        for (const dateString of Object.keys(dailyLogs)) {
+        return Object.keys(dailyLogs).some(dateString => {
             const logDate = parseISO(dateString);
-            if (isAfter(logDate, startDate) || isSameDay(logDate, startDate)) {
-                if (typeof dailyLogs[dateString].weight === 'number' && !isNaN(dailyLogs[dateString].weight)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+            const weightValue = dailyLogs[dateString].weight;
+            return (isAfter(logDate, startDate) || isSameDay(logDate, startDate)) && typeof weightValue === 'number' && !isNaN(weightValue);
+        });
     }, [dailyLogs]);
 
-    // Redefine activePeriod se o atual não tiver dados
     useEffect(() => {
         if (!hasDataForPeriod(activePeriod)) {
-            // Se o período ativo não tem dados, tenta encontrar o período 'mais' ou '1m'
             if (hasDataForPeriod('mais')) {
                 setActivePeriod('mais');
             } else {
-                setActivePeriod('1m'); // Cairá no noDataContainer se não houver dados em 'mais' também
+                setActivePeriod('1m');
             }
         }
-    }, [activePeriod, hasDataForPeriod]); // Quando activePeriod ou hasDataForPeriod muda
+    }, [activePeriod, hasDataForPeriod]);
 
-
-    // Dados de Meta Alimentar (macros)
     const translatedMetaAlimentar = useMemo(() => {
         if (!nutritionalGoals || !nutritionalGoals.macros || typeof nutritionalGoals.metaCalorias === 'undefined') {
             return [];
@@ -348,7 +295,6 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                     <Text style={styles.headerSubtitle}>{t('progress.subtitle')}</Text>
                 </View>
 
-                {/* Filtro de Período Redesenhado */}
                 <View style={styles.periodFilterContainer}>
                     {PERIODS.map((period) => (
                         <TouchableOpacity
@@ -356,10 +302,10 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                             style={[
                                 styles.periodButton, 
                                 activePeriod === period && styles.periodButtonActive,
-                                !hasAnyWeightData && styles.periodButtonDisabled // Desabilita se não tiver NENHUM dado
+                                !hasAnyWeightData && styles.periodButtonDisabled
                             ]}
                             onPress={() => setActivePeriod(period)}
-                            disabled={!hasAnyWeightData} // Desabilita o botão de filtro se não houver dados
+                            disabled={!hasAnyWeightData}
                             accessibilityLabel={t(`progress.${periodKeyMap[period]}`)}
                         >
                             <Text style={[
@@ -373,8 +319,7 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                     ))}
                 </View>
 
-                {/* Card Unificado de Progresso */}
-                    <View style={styles.progressCard}>
+                <View style={styles.progressCard}>
                     {isLoadingWeightData ? (
                         <ActivityIndicator size="large" color="#AEF359" style={{ marginVertical: 50 }} />
                     ) : errorLoadingWeightData ? (
@@ -385,86 +330,77 @@ const ProgressoDetalhadoScreen: React.FC<ProgressoDetalhadoProps> = ({ navigatio
                             <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
                         </TouchableOpacity>
                         </View>
-                    ) : hasAnyWeightData === false ? ( // Caso não tenha NENHUM dado de peso
+                    ) : !hasAnyWeightData ? ( 
                         <View style={styles.noDataContainer}>
-                        <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
-                        <Text style={styles.noDataText}>{t('progress.no_weight_data')}</Text>
-                        <Text style={styles.noDataText}>{t('progress.register_weight_daily')}</Text>
+                            <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                            <Text style={styles.noDataText}>{t('progress.no_weight_data')}</Text>
+                            <Text style={styles.noDataText}>{t('progress.register_weight_daily')}</Text>
                         </View>
-                    ) : chartWeightData.isEmpty ? ( // Caso tenha dados gerais, mas não para o período selecionado
+                    ) : chartWeightData.isEmpty ? (
                         <View style={styles.noDataContainer}>
-                        <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
-                        <Text style={styles.noDataText}>{t('progress.no_data_selected_period')}</Text>
-                        <Text style={styles.noDataText}>{t('progress.try_other_period')}</Text>
+                            <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                            <Text style={styles.noDataText}>{t('progress.no_data_selected_period')}</Text>
+                            <Text style={styles.noDataText}>{t('progress.try_other_period')}</Text>
                         </View>
                     ) : (
                         <>
-                        {/* GRÁFICO COM SCROLL HORIZONTAL */}
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chartScrollView}>
                             <LineChart
-                            data={{
-                                labels: chartWeightData.labels,
-                                datasets: chartWeightData.datasets,
-                            }}
-                            width={chartWeightData.chartWidth} // Largura dinâmica
-                            height={230}
-                            chartConfig={CHART_CONFIG}
-                            bezier
-                            style={styles.chart}
-                            withVerticalLabels
-                            withHorizontalLabels
-                            segments={5}
+                                data={chartWeightData}
+                                width={width * 0.9 - 20} // Ajuste de largura
+                                height={230}
+                                chartConfig={CHART_CONFIG}
+                                bezier
+                                style={styles.chart}
+                                fromZero
                             />
-                        </ScrollView>
 
-                        {/* Seção de Metas Alimentares (Macros) */}
-                        <View style={styles.divider} />
-                        {isLoadingMacros ? (
-                            <ActivityIndicator size="small" color="#AEF359" style={{ marginVertical: 20 }} />
-                        ) : errorLoadingMacros ? (
-                            <View style={styles.errorContainer}>
-                            <MaterialIcons name="error-outline" size={30} color="#C62828" />
-                            <Text style={styles.errorTextSmall}>{errorLoadingMacros}</Text>
-                            <TouchableOpacity onPress={fetchNutritionalGoals} style={styles.retryButton}>
-                                <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
-                            </TouchableOpacity>
-                            </View>
-                        ) : (
-                            <>
-                            <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
-                            {translatedMetaAlimentar.length > 0 ? (
-                                translatedMetaAlimentar.map((item, index) => (
-                                <View key={index} style={styles.metaItem}>
-                                    <View style={styles.metaHeader}>
-                                    <View style={styles.metaLabelContainer}>
-                                        <View style={[styles.metaColorDot, { backgroundColor: item.color }]} />
-                                        <Text style={styles.metaText}>{item.label}</Text>
-                                    </View>
-                                    <Text style={styles.metaValueText}>{item.value}{item.unit}</Text>
-                                    </View>
-                                    <View style={styles.progressBarBackground}>
-                                    <View style={[styles.progressBarFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
-                                    </View>
-                                </View>
-                                ))
-                            ) : (
-                                <View style={styles.noDataContainer}>
-                                <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
-                                <Text style={styles.noDataText}>{t('progress.no_nutritional_goals')}</Text>
-                                <Text style={styles.noDataText}>{t('progress.complete_profile_to_see_progress')}</Text>
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('PerfilTab')}
-                                    style={styles.retryButton}
-                                >
-                                    <Text style={styles.retryButtonText}>{t('progress.define_goals')}</Text>
+                            <View style={styles.divider} />
+                            {isLoadingMacros ? (
+                                <ActivityIndicator size="small" color="#AEF359" style={{ marginVertical: 20 }} />
+                            ) : errorLoadingMacros ? (
+                                <View style={styles.errorContainer}>
+                                <MaterialIcons name="error-outline" size={30} color="#C62828" />
+                                <Text style={styles.errorTextSmall}>{errorLoadingMacros}</Text>
+                                <TouchableOpacity onPress={fetchNutritionalGoals} style={styles.retryButton}>
+                                    <Text style={styles.retryButtonText}>{t('common.retry')}</Text>
                                 </TouchableOpacity>
                                 </View>
+                            ) : (
+                                <>
+                                <Text style={styles.metaAlimentarTitle}>{t('progress.food_goal_title')}</Text>
+                                {translatedMetaAlimentar.length > 0 ? (
+                                    translatedMetaAlimentar.map((item, index) => (
+                                    <View key={index} style={styles.metaItem}>
+                                        <View style={styles.metaHeader}>
+                                        <View style={styles.metaLabelContainer}>
+                                            <View style={[styles.metaColorDot, { backgroundColor: item.color }]} />
+                                            <Text style={styles.metaText}>{item.label}</Text>
+                                        </View>
+                                        <Text style={styles.metaValueText}>{item.value}{item.unit}</Text>
+                                        </View>
+                                        <View style={styles.progressBarBackground}>
+                                        <View style={[styles.progressBarFill, { width: `${item.percentage}%`, backgroundColor: item.color }]} />
+                                        </View>
+                                    </View>
+                                    ))
+                                ) : (
+                                    <View style={styles.noDataContainer}>
+                                    <MaterialIcons name="info-outline" size={30} color="#9E9E9E" />
+                                    <Text style={styles.noDataText}>{t('progress.no_nutritional_goals')}</Text>
+                                    <Text style={styles.noDataText}>{t('progress.complete_profile_to_see_progress')}</Text>
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate('PerfilTab')}
+                                        style={styles.retryButton}
+                                    >
+                                        <Text style={styles.retryButtonText}>{t('progress.define_goals')}</Text>
+                                    </TouchableOpacity>
+                                    </View>
+                                )}
+                                </>
                             )}
-                            </>
-                        )}
                         </>
                     )}
-                    </View>
+                </View>
             </ScrollView>
         </View>
     );
@@ -479,9 +415,11 @@ const styles = StyleSheet.create({
         paddingTop: 60,
         paddingBottom: 120,
         paddingHorizontal: 20,
+        alignItems: 'center',
     },
     header: {
         marginBottom: 24,
+        width: '100%',
     },
     headerTitle: {
         fontSize: 34,
@@ -500,6 +438,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#181917',
         borderRadius: 50,
         padding: 4,
+        width: '100%',
     },
     periodButton: {
         flex: 1,
@@ -519,10 +458,10 @@ const styles = StyleSheet.create({
     periodButtonTextActive: {
         color: '#000',
     },
-    periodButtonDisabled: { // Novo estilo para botões de período desabilitados
+    periodButtonDisabled: {
         opacity: 0.5,
     },
-    periodButtonTextDisabled: { // Novo estilo para texto de botões de período desabilitados
+    periodButtonTextDisabled: {
         color: '#888',
     },
     progressCard: {
@@ -530,19 +469,17 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         paddingTop: 16,
         paddingBottom: 8,
-        overflow: 'hidden',
-    },
-    chartScrollView: {
-        paddingLeft: 20,
+        width: '100%',
+        alignItems: 'center',
     },
     chart: {
-        paddingRight: 20,
+        borderRadius: 16,
     },
     divider: {
         height: 1,
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
         marginVertical: 16,
-        marginHorizontal: 20,
+        width: '90%',
     },
     metaAlimentarTitle: {
         fontSize: 20,
@@ -550,10 +487,12 @@ const styles = StyleSheet.create({
         color: '#FFF',
         marginBottom: 20,
         paddingHorizontal: 20,
+        width: '100%',
     },
     metaItem: {
         marginBottom: 24,
         paddingHorizontal: 20,
+        width: '100%',
     },
     metaHeader: {
         flexDirection: 'row',
@@ -620,7 +559,9 @@ const styles = StyleSheet.create({
     },
     noDataContainer: {
         alignItems: 'center',
+        justifyContent: 'center',
         padding: 20,
+        minHeight: 250,
     },
     noDataText: {
         color: '#9E9E9E',

@@ -15,15 +15,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "googleServicesFile": "./google-services.json",
         "foregroundImage": "./assets/icon.png"
       },
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
-      "androidNavigationBar": {
-        "backgroundColor": "#000000",
-        "barStyle": "light-content"
-      },
-      "package": "com.vn777.DynamisApp"
+      "package": "com.company.dynamis"
     },
     "web": {
       "favicon": "./assets/icon.png"
